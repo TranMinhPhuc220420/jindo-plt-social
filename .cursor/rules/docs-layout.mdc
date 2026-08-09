@@ -1,0 +1,12 @@
+---
+description: Docs layout for vibe-coding agents — where to read/write SRS, progress, ADRs, handoffs
+alwaysApply: true
+---
+
+# Docs layout
+
+- Entry: root `AGENTS.md` → map in `docs/README.md`.
+- Spec: `docs/SRS.md` · Status: `docs/PROGRESS.md`.
+- Why: `docs/decisions/` (ADR) · Shape: `docs/architecture/` · Feature design: `docs/design/`.
+- Working memory: `docs/notes/` · Session bridge: `docs/handoffs/` · Prompt seeds: `docs/prompts/`.
+- Do not invent new top-level `docs/` folders without updating `docs/README.md` and `AGENTS.md`.

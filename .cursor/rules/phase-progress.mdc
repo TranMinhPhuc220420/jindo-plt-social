@@ -1,0 +1,29 @@
+---
+description: Keep PLT Social phase progress checkboxes in docs/PROGRESS.md in sync when implementing features
+alwaysApply: true
+---
+
+# Phase progress tracking
+
+## Before starting implementation work
+
+1. Read [`docs/PROGRESS.md`](docs/PROGRESS.md) (status board) and the matching phase in [`docs/SRS.md`](docs/SRS.md).
+2. Only work on the **Active phase**. Do not start later-phase items unless the user explicitly overrides.
+3. Set the item you are about to do to `[~]`, update **Current focus** (`Active item`, `Last updated`, `Last note`).
+
+## While / after finishing a chunk of work
+
+1. Mark finished checklist items `[x]`. Leave unrelated items untouched.
+2. If blocked, mark `[!]` and note why under **Current focus** → `Last note`; optionally add `docs/notes/blocker-….md`.
+3. When every item under a phase (including its quality gate) is `[x]`, mark that phase overview line `[x]` and move **Active phase** to the next number.
+4. Append one row to **Session log** (date, phase, short change summary).
+5. Ending a long session → also write `docs/handoffs/YYYYMMDD-….md` (see that folder's README).
+6. Do **not** rewrite SRS acceptance lists as a substitute for `PROGRESS.md` — SRS stays the spec; PROGRESS stays the status.
+
+## Doc map
+
+See `docs/README.md` and root `AGENTS.md` for architecture / decisions / design / notes / prompts.
+
+## Checkbox markers
+
+- `[ ]` not started · `[~]` in progress · `[x]` done · `[!]` blocked

@@ -1,0 +1,12 @@
+{
+  "scanned_at": "2026-08-08",
+  "framework": "Laravel 13 + Inertia React 3 + Vite 8 + Tailwind CSS 4",
+  "fonts": "Instrument Sans (resources/css/app.css @theme --font-sans)",
+  "palette": "shadcn OKLCH tokens in resources/css/app.css (:root + .dark) — neutral/grey, not Midnight",
+  "motion": "tw-animate-css only; no framer-motion/gsap",
+  "spacing": "Tailwind default + --radius 0.625rem",
+  "design_md": false,
+  "hallmark_log": false,
+  "preserve": ["Inertia routes", "Fortify auth pages", "shadcn component API", "AppShell/sidebar structure"],
+  "introduce": ["Midnight atmospheric tokens mapped onto shadcn CSS vars", "welcome/auth visual redesign", "design.md lock optional after build"]
+}
