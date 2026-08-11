@@ -61,6 +61,40 @@ test('mutual followers can message each other', function () {
     });
 });
 
+test('json message send returns chat payload without inertia reload', function () {
+    Event::fake([MessageSent::class, UnreadBadgesUpdated::class]);
+
+    $a = User::factory()->create();
+    $b = User::factory()->create();
+
+    $a->following()->attach($b->id);
+    $b->following()->attach($a->id);
+
+    $conversation = app(ConversationService::class)->findOrCreateBetween($a, $b);
+
+    $this->actingAs($a)
+        ->postJson(route('messages.messages.store', $conversation), [
+            'body' => 'Fast path hello',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('body', 'Fast path hello')
+        ->assertJsonPath('is_mine', true)
+        ->assertJsonPath('user.id', $a->id)
+        ->assertJsonStructure([
+            'id',
+            'conversation_id',
+            'body',
+            'image_url',
+            'shared_post',
+            'created_at',
+            'user' => ['id', 'name', 'username', 'avatar'],
+            'is_mine',
+        ]);
+
+    Event::assertDispatched(MessageSent::class);
+    Event::assertDispatched(UnreadBadgesUpdated::class);
+});
+
 test('marking a thread read while viewing clears unread for that conversation', function () {
     Event::fake([UnreadBadgesUpdated::class]);
 

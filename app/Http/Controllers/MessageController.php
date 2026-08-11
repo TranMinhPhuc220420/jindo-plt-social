@@ -2,21 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\MessageSent;
-use App\Events\UnreadBadgesUpdated;
 use App\Http\Requests\StoreMessageRequest;
 use App\Models\Conversation;
 use App\Models\Message;
-use App\Services\UnreadMessageService;
+use App\Services\Messaging\MessageBroadcaster;
 use App\Support\MediaDisk;
+use App\Support\MessagePresenter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Throwable;
 
 class MessageController extends Controller
 {
-    public function __construct(private readonly UnreadMessageService $unreadMessages) {}
+    public function __construct(private readonly MessageBroadcaster $broadcaster) {}
 
-    public function store(StoreMessageRequest $request, Conversation $conversation): RedirectResponse
+    public function store(StoreMessageRequest $request, Conversation $conversation): RedirectResponse|JsonResponse
     {
         $this->authorize('create', [Message::class, $conversation]);
 
@@ -34,27 +33,14 @@ class MessageController extends Controller
 
         $conversation->touch();
 
-        try {
-            broadcast(new MessageSent($message))->toOthers();
-        } catch (Throwable $e) {
-            // Reverb/Redis may be down in local — never fail the send itself.
-            report($e);
-        }
+        $this->broadcaster->publishSent($message);
+        $this->broadcaster->scheduleRecipientBadge($conversation, $request->user());
 
-        $conversation->loadMissing('participants');
-        $recipient = $conversation->otherParticipant($request->user());
-
-        if ($recipient) {
-            try {
-                broadcast(new UnreadBadgesUpdated(
-                    $recipient,
-                    $this->unreadMessages->countFor($recipient),
-                    null,
-                    $conversation->id,
-                ));
-            } catch (Throwable $e) {
-                report($e);
-            }
+        if ($request->expectsJson()) {
+            return response()->json(
+                MessagePresenter::toChatArray($message, $request->user()),
+                201,
+            );
         }
 
         return to_route('messages.show', $conversation);

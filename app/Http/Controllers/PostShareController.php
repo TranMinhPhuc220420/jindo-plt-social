@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\MessageSent;
-use App\Events\UnreadBadgesUpdated;
 use App\Http\Requests\SharePostMessageRequest;
 use App\Http\Requests\StoreSharePostRequest;
 use App\Models\Post;
@@ -13,11 +11,10 @@ use App\Services\ConversationService;
 use App\Services\FeedService;
 use App\Services\HashtagService;
 use App\Services\MentionService;
-use App\Services\UnreadMessageService;
+use App\Services\Messaging\MessageBroadcaster;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use InvalidArgumentException;
-use Throwable;
 
 class PostShareController extends Controller
 {
@@ -26,7 +23,7 @@ class PostShareController extends Controller
         private readonly MentionService $mentions,
         private readonly HashtagService $hashtags,
         private readonly ConversationService $conversations,
-        private readonly UnreadMessageService $unreadMessages,
+        private readonly MessageBroadcaster $messageBroadcaster,
     ) {}
 
     public function store(StoreSharePostRequest $request, Post $post): RedirectResponse
@@ -94,27 +91,8 @@ class PostShareController extends Controller
 
             $conversation->touch();
 
-            try {
-                broadcast(new MessageSent($message))->toOthers();
-            } catch (Throwable $e) {
-                report($e);
-            }
-
-            $conversation->loadMissing('participants');
-            $recipient = $conversation->otherParticipant($actor);
-
-            if ($recipient) {
-                try {
-                    broadcast(new UnreadBadgesUpdated(
-                        $recipient,
-                        $this->unreadMessages->countFor($recipient),
-                        null,
-                        $conversation->id,
-                    ));
-                } catch (Throwable $e) {
-                    report($e);
-                }
-            }
+            $this->messageBroadcaster->publishSent($message);
+            $this->messageBroadcaster->scheduleRecipientBadge($conversation, $actor);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Post sent.')]);

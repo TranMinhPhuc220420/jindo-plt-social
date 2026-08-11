@@ -8,6 +8,7 @@ Living notes on how PLT Social is structured in this repo. Keep entries short; l
 |------|--------|
 | [overview.md](./overview.md) | Stack, request flow, key directories |
 | [module-map.md](./module-map.md) | Phased folder/file blueprint (P1–P3) |
+| [realtime-inventory.md](./realtime-inventory.md) | Living list of realtime capabilities (Echo / Firebase RTDB) |
 
 ## When to update
 

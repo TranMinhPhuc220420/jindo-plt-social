@@ -1,0 +1,40 @@
+{
+  "rules": {
+    "realtime": {
+      "users": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          "badges": {
+            ".write": false
+          },
+          "events": {
+            "notification": {
+              ".write": false
+            }
+          }
+        }
+      },
+      "conversations": {
+        "$cid": {
+          ".read": "auth != null && root.child('realtime/conversations/' + $cid + '/members/' + auth.uid).val() === true",
+          "members": {
+            "$memberId": {
+              ".write": false
+            }
+          },
+          "events": {
+            "message": {
+              ".write": false
+            }
+          },
+          "typing": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && root.child('realtime/conversations/' + $cid + '/members/' + auth.uid).val() === true",
+              ".validate": "newData.hasChildren(['name', 'at']) && newData.child('name').isString() && newData.child('at').isNumber()"
+            }
+          }
+        }
+      }
+    }
+  }
+}

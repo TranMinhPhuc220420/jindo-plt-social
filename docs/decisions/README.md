@@ -50,3 +50,4 @@ Brief list of rejected options.
 | [0011](./0011-safe-post-markdown.md) | Safe post markdown (social subset + sanitize) | Accepted |
 | [0012](./0012-mobile-liquid-glass-chrome.md) | Mobile chrome (glass abandoned → solid) | Superseded |
 | [0013](./0013-post-share.md) | Facebook-like post share (feed + copy + DM) | Accepted |
+| [0014](./0014-firebase-realtime-event-bus.md) | Firebase RTDB event bus (MySQL SoT) on cPanel | Accepted |

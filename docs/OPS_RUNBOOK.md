@@ -76,11 +76,16 @@ CI already includes `vendor/` (Composer `--no-dev`) and `public/build/` (Vite). 
 
    CACHE_STORE=database
    QUEUE_CONNECTION=database
-   BROADCAST_CONNECTION=log
+   BROADCAST_CONNECTION=firebase
+   FIREBASE_CREDENTIALS=/home/USER/firebase/service-account.json
+   FIREBASE_DATABASE_URL=https://YOUR_PROJECT.firebaseio.com
+   FIREBASE_PROJECT_ID=YOUR_PROJECT
    MEDIA_DISK=public
    SESSION_DRIVER=database
    LOG_LEVEL=error
    ```
+
+   Build the release with `VITE_FIREBASE_*` set so the client can listen (see §5).
 
 4. **App key** (if `APP_KEY` empty):
 
@@ -152,8 +157,27 @@ Permissions: `storage/` and `bootstrap/cache/` must be writable by the web user.
 | Queue | `QUEUE_CONNECTION=database` | Same; required for `ProcessPostMediaJob` |
 | Worker | Cron or Terminal `queue:work` | No Supervisor → prefer Cron below |
 | Horizon | **Off** | Needs Redis + long process |
-| Broadcast | `BROADCAST_CONNECTION=log` | Reverb needs a persistent WebSocket process |
-| Realtime UX | Refresh / poll | Live DM/notifications WS deferred (Firebase/Reverb later) |
+| Broadcast | `BROADCAST_CONNECTION=firebase` | Reverb needs a persistent WebSocket process; Firebase RTDB is the event bus |
+| Realtime UX | Firebase RTDB listeners | MySQL remains source of truth — see [realtime-inventory.md](./architecture/realtime-inventory.md) |
+
+### Firebase checklist (one-time + every env change)
+
+1. Create a Firebase project with **Realtime Database**; deploy rules from [`firebase/database.rules.json`](../firebase/database.rules.json) (see [`firebase/README.md`](../firebase/README.md)).
+2. Download a service account JSON; place **outside** `public_html` (e.g. `~/firebase/service-account.json`); `chmod 600`.
+3. Server `.env`:
+
+   ```env
+   BROADCAST_CONNECTION=firebase
+   FIREBASE_CREDENTIALS=/home/USER/firebase/service-account.json
+   FIREBASE_DATABASE_URL=https://YOUR_PROJECT.firebaseio.com
+   FIREBASE_PROJECT_ID=YOUR_PROJECT
+   ```
+
+4. CI / Vite build must include `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_DATABASE_URL`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` so `public/build` can sign in and listen.
+5. Smoke: two browsers — send DM (sender optimistic; peer gets Firebase event), typing indicator, like a post (bell +1), open thread (badge decreases).
+6. If Firebase is unavailable, HTTP still succeeds (fail-soft); UI may need refresh.
+
+Capability list (add/remove realtime features here): [architecture/realtime-inventory.md](./architecture/realtime-inventory.md). ADR: [decisions/0014-firebase-realtime-event-bus.md](./decisions/0014-firebase-realtime-event-bus.md).
 
 **Cron (recommended on shared):** every minute:
 
@@ -195,6 +219,8 @@ After uploads, count should return toward `0` if the worker is healthy.
 | Login as admin | Dashboard / admin gates work |
 | Create a post **with image** | Job leaves `jobs` table; image visible (needs queue worker + `storage:link`) |
 | Avatar / cover upload | Same as media |
+| Live DM (2 sessions) | Sender: optimistic bubble immediately; receiver: Firebase without full page reload |
+| Notification bell | Like/follow bumps badge live when Firebase configured |
 | `APP_DEBUG=false` | No stack traces to public users |
 | Wrong FTP path | Fixed if site 404 after extract — confirm extract path vs subdomain docroot |
 

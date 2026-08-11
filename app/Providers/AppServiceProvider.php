@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
+use App\Broadcasting\FirebaseBroadcaster;
+use App\Services\Firebase\FirebaseRealtimePublisher;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
@@ -28,6 +31,16 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureRateLimiting();
+        $this->configureBroadcasting();
+    }
+
+    protected function configureBroadcasting(): void
+    {
+        Broadcast::extend('firebase', function ($app, array $config): FirebaseBroadcaster {
+            return new FirebaseBroadcaster(
+                $app->make(FirebaseRealtimePublisher::class),
+            );
+        });
     }
 
     /**

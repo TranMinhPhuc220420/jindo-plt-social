@@ -11,11 +11,16 @@ import UnreadBadgesLayout from '@/layouts/app/unread-badges-layout';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
+import { isFirebaseConfigured } from '@/lib/firebase';
 
 const appName = import.meta.env.VITE_APP_NAME || 'PLT Social';
 
-// So broadcast()->toOthers() can exclude this tab on Inertia form visits.
+// So broadcast()->toOthers() can exclude this tab on Inertia form visits (Reverb only).
 router.on('before', (event) => {
+    if (isFirebaseConfigured()) {
+        return;
+    }
+
     const socketId = echo.socketId();
 
     if (socketId) {

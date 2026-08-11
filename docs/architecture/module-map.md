@@ -268,8 +268,10 @@ resources/js/
       notification-list.tsx                         [P2](new)
     app-sidebar.tsx / app-header.tsx                [P2](extend)
   hooks/
-    use-echo.ts                                     [P2](new)
-  echo.ts                                           [P2](new)  # or bootstrap in app.tsx
+    use-conversation-realtime.ts                    [P3](extend)  # Firebase or Echo
+  lib/
+    firebase.ts / firebase-auth.ts / realtime.ts    # Firebase RTDB adapters
+  echo.ts                                           [P2](new)  # Reverb local
   types/
     comment.ts                                      [P2](new)
     notification.ts                                 [P2](new)

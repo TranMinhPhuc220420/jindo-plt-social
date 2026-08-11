@@ -20,8 +20,8 @@
 |-------|--------|
 | **Active phase** | `—` |
 | **Active item** | `—` |
-| **Last updated** | `2026-08-09` |
-| **Last note** | Phase 29 complete: Messages mobile UX (inbox-first, immersive thread, keyboard/emoji). |
+| **Last updated** | `2026-08-11` |
+| **Last note** | Firebase RTDB event bus (MySQL SoT) for cPanel realtime; inventory in `docs/architecture/realtime-inventory.md`. |
 
 ---
 

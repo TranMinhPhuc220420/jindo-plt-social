@@ -17,7 +17,12 @@ Browser (React + Inertia)
   → Inertia::render(page) or redirect
 ```
 
-Realtime (Phase 2+): Laravel events → Reverb → Echo on the client.
+Realtime (Phase 2+): Laravel events → broadcast driver → client.
+
+- **Local:** Reverb → Echo (`BROADCAST_CONNECTION=reverb`).
+- **cPanel production:** Firebase Realtime Database event bus (`BROADCAST_CONNECTION=firebase`); MySQL remains source of truth.
+
+Living capability list: [`realtime-inventory.md`](./realtime-inventory.md). Decision: [ADR 0014](../decisions/0014-firebase-realtime-event-bus.md).
 
 ## Key directories
 

@@ -4,12 +4,15 @@ namespace App\Services;
 
 use App\Models\Conversation;
 use App\Models\User;
+use App\Services\Firebase\ConversationMemberSync;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class ConversationService
 {
+    public function __construct(private ConversationMemberSync $memberSync) {}
+
     public function findOrCreateBetween(User $a, User $b): Conversation
     {
         if (! $a->isMutualWith($b)) {
@@ -23,14 +26,21 @@ class ConversationService
             ->first();
 
         if ($existing !== null) {
-            return $existing->load('participants');
+            $conversation = $existing->load('participants');
+            $this->memberSync->sync($conversation);
+
+            return $conversation;
         }
 
-        return DB::transaction(function () use ($a, $b): Conversation {
+        $conversation = DB::transaction(function () use ($a, $b): Conversation {
             $conversation = Conversation::query()->create();
             $conversation->participants()->attach([$a->id, $b->id]);
 
             return $conversation->load('participants');
         });
+
+        $this->memberSync->sync($conversation);
+
+        return $conversation;
     }
 }

@@ -5,6 +5,7 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\ExploreController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\FirebaseTokenController;
 use App\Http\Controllers\FollowController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\MessageController;
@@ -58,6 +59,10 @@ Route::middleware(['auth', 'verified', EnsureUserIsNotSuspended::class])->group(
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::patch('notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+
+    Route::post('firebase/token', FirebaseTokenController::class)
+        ->middleware('throttle:60,1')
+        ->name('firebase.token');
 
     Route::get('u/{username}', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('u/{username}/about', [ProfileController::class, 'about'])->name('profile.about');

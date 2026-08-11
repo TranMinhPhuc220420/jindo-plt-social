@@ -16,7 +16,11 @@ class MessageSent implements ShouldBroadcastNow
 
     public function __construct(public Message $message)
     {
-        $this->message->loadMissing(['user', 'sharedPost.user', 'sharedPost.media']);
+        $this->message->loadMissing(['user']);
+
+        if ($this->message->shared_post_id !== null) {
+            $this->message->loadMissing(['sharedPost.user', 'sharedPost.media']);
+        }
     }
 
     /**

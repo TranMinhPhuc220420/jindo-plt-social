@@ -6,7 +6,7 @@ Lean index. Deep detail lives in the linked folders — do not duplicate SRS her
 |------|---------|-------------|
 | [SRS.md](./SRS.md) | Product requirements, phases, NFR | Human (+ agent when requirements change) |
 | [PROGRESS.md](./PROGRESS.md) | Phase checkboxes & session log | **Agent every implementation turn** |
-| [architecture/](./architecture/) | System shape, data flows, module map | When architecture changes |
+| [architecture/](./architecture/) | System shape, data flows, module map, [realtime inventory](./architecture/realtime-inventory.md) | When architecture changes |
 | [decisions/](./decisions/) | ADRs — why we chose X over Y | When a durable decision is made |
 | [design/](./design/) | Feature/design notes before or during build | Per non-trivial feature |
 | [notes/](./notes/) | Blockers, scratch state, investigation | During active work |

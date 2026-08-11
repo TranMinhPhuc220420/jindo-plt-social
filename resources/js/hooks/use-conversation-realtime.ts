@@ -6,7 +6,10 @@ import {
     useRef,
     useState,
 } from 'react';
-import echo from '@/echo';
+import {
+    isRealtimeEnabled,
+    subscribeConversationRealtime,
+} from '@/lib/realtime';
 import type { Auth, ChatMessage } from '@/types';
 
 type PageProps = {
@@ -16,15 +19,6 @@ type PageProps = {
 export type TypingPeer = {
     id: number;
     name: string;
-};
-
-type WhisperPayload = {
-    typing?: boolean;
-    user_id?: number;
-    user?: {
-        id: number;
-        name: string;
-    };
 };
 
 type Options = {
@@ -50,8 +44,8 @@ function xsrfToken(): string | undefined {
 }
 
 /**
- * Conversation realtime: messages + typing on a single private channel.
- * Typing prefers Echo whisper (no HTTP); falls back to POST when Reverb is off.
+ * Conversation realtime: messages + typing (Firebase RTDB or Echo/Reverb).
+ * Typing prefers the live driver; falls back to POST when realtime is off.
  */
 export function useConversationRealtime(
     conversationId: number,
@@ -70,7 +64,9 @@ export function useConversationRealtime(
 
     const [typingPeer, setTypingPeer] = useState<TypingPeer | null>(null);
 
-    const channelRef = useRef<ReturnType<typeof echo.private> | null>(null);
+    const publishTypingRef = useRef<
+        ((typing: boolean, user: { id: number; name: string }) => void) | null
+    >(null);
     const localTypingRef = useRef(false);
     const lastSentAtRef = useRef(0);
     const idleStopTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -128,20 +124,17 @@ export function useConversationRealtime(
 
     const publish = useCallback(
         (typing: boolean) => {
-            const payload: WhisperPayload = {
-                typing,
-                user: self ? { id: self.id, name: self.name } : undefined,
-            };
+            const user = self ? { id: self.id, name: self.name } : undefined;
 
-            const channel = channelRef.current;
+            const livePublish = publishTypingRef.current;
 
-            if (channel && import.meta.env.VITE_REVERB_APP_KEY) {
-                channel.whisper('typing', payload);
+            if (livePublish && user && isRealtimeEnabled()) {
+                livePublish(typing, user);
 
                 return;
             }
 
-            // Without Reverb, only announce "started" — stop is local-only.
+            // Without realtime, only announce "started" — stop is local-only.
             if (!typing) {
                 return;
             }
@@ -202,70 +195,39 @@ export function useConversationRealtime(
     );
 
     useEffect(() => {
-        if (!import.meta.env.VITE_REVERB_APP_KEY) {
-            channelRef.current = null;
+        if (!isRealtimeEnabled()) {
+            publishTypingRef.current = null;
 
             return;
         }
 
-        const channelName = `conversation.${conversationId}`;
-        const channel = echo.private(channelName);
-        channelRef.current = channel;
-
-        channel.listen('.message.sent', (payload: ChatMessage) => {
-            clearRemoteTyping(payload.user.id);
-            onMessage(payload);
-        });
-
-        channel.listenForWhisper('typing', (payload: WhisperPayload) => {
-            const fromUser =
-                payload.user ??
-                (payload.user_id !== undefined
-                    ? {
-                          id: payload.user_id,
-                          name:
-                              peerRef.current?.id === payload.user_id
-                                  ? peerRef.current.name
-                                  : 'Someone',
-                      }
-                    : null);
-
-            if (!fromUser?.id) {
-                return;
-            }
-
-            // Treat missing `typing` as started (legacy / filtered payloads).
-            if (payload.typing === false) {
-                clearRemoteTyping(fromUser.id);
-
-                return;
-            }
-
-            markRemoteTyping({ id: fromUser.id, name: fromUser.name });
-        });
-
-        channel.listen(
-            '.user.typing',
-            (payload: { user: { id: number; name: string } }) => {
-                if (!payload.user?.id) {
-                    return;
-                }
-
-                markRemoteTyping({
-                    id: payload.user.id,
-                    name: payload.user.name,
-                });
+        const { unsubscribe, publishTyping } = subscribeConversationRealtime(
+            conversationId,
+            {
+                selfUserId: self?.id,
+                onMessage: (payload) => {
+                    clearRemoteTyping(payload.user.id);
+                    onMessage(payload);
+                },
+                onTyping: (remote) => {
+                    markRemoteTyping({ id: remote.id, name: remote.name });
+                },
+                onTypingStopped: (userId) => {
+                    clearRemoteTyping(userId);
+                },
             },
         );
+
+        publishTypingRef.current = publishTyping;
 
         return () => {
             stopLocalTyping();
             clearRemoteExpire();
-            channelRef.current = null;
-            echo.leave(channelName);
+            publishTypingRef.current = null;
+            unsubscribe();
             setTypingPeer(null);
         };
-    }, [conversationId, clearRemoteTyping, stopLocalTyping]);
+    }, [conversationId, clearRemoteTyping, stopLocalTyping, self?.id]);
 
     return {
         typingPeer,

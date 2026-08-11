@@ -10,7 +10,7 @@ import {
     useState,
 } from 'react';
 import type { ReactNode } from 'react';
-import echo from '@/echo';
+import { isRealtimeEnabled, subscribeUserRealtime } from '@/lib/realtime';
 import type { AppNotification, Auth } from '@/types';
 
 type PageProps = {
@@ -263,31 +263,14 @@ export function UnreadBadgesProvider({ children }: { children: ReactNode }) {
     );
 
     useEffect(() => {
-        if (!userId || !import.meta.env.VITE_REVERB_APP_KEY) {
+        if (!userId || !isRealtimeEnabled()) {
             return;
         }
 
-        const channelName = `App.Models.User.${userId}`;
-        const channel = echo.private(channelName);
-
-        channel.notification((notification: Record<string, unknown>) => {
-            onNotification(notification);
+        return subscribeUserRealtime(userId, {
+            onNotification,
+            onUnreadBadges,
         });
-
-        channel.listen(
-            '.unread.badges',
-            (payload: {
-                unread_messages_count?: number;
-                unread_notifications_count?: number;
-                conversation_id?: number;
-            }) => {
-                onUnreadBadges(payload);
-            },
-        );
-
-        return () => {
-            echo.leave(channelName);
-        };
     }, [userId]);
 
     const clearNotifications = useCallback(() => {

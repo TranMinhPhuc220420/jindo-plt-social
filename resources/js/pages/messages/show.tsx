@@ -144,6 +144,29 @@ export default function MessagesShow({
             all.findIndex((item) => item.id === message.id) === index,
     );
 
+    const appendOrReplaceLive = (
+        next: ChatMessage,
+        replaceClientId?: number,
+    ) => {
+        setLiveMessages((current) => {
+            const withoutDup = current.filter(
+                (item) =>
+                    item.id !== next.id &&
+                    (replaceClientId === undefined ||
+                        item.id !== replaceClientId),
+            );
+
+            if (
+                initialMessages.some((item) => item.id === next.id) &&
+                replaceClientId === undefined
+            ) {
+                return withoutDup;
+            }
+
+            return [...withoutDup, next];
+        });
+    };
+
     const bumpInboxPreview = (
         conversationId: number,
         body: string | null,
@@ -214,22 +237,15 @@ export default function MessagesShow({
             onMessage: (payload) => {
                 const mine = payload.user.id === auth.user?.id;
 
-                setLiveMessages((current) => {
-                    if (
-                        current.some((item) => item.id === payload.id) ||
-                        initialMessages.some((item) => item.id === payload.id)
-                    ) {
-                        return current;
-                    }
+                // Own sends are handled via optimistic + JSON confirm.
+                if (mine) {
+                    return;
+                }
 
-                    return [
-                        ...current,
-                        {
-                            ...payload,
-                            is_mine: mine,
-                            read_at: mine ? null : new Date().toISOString(),
-                        },
-                    ];
+                appendOrReplaceLive({
+                    ...payload,
+                    is_mine: false,
+                    read_at: new Date().toISOString(),
                 });
 
                 bumpInboxPreview(
@@ -239,11 +255,7 @@ export default function MessagesShow({
                     false,
                 );
 
-                // Own sends can echo back when the form lacks X-Socket-ID —
-                // only mark-read for inbound messages while focused.
-                if (!mine) {
-                    markThreadRead();
-                }
+                markThreadRead();
             },
         },
     );
@@ -332,7 +344,37 @@ export default function MessagesShow({
                     />
                     <MessageComposer
                         conversationId={conversation.id}
+                        self={{
+                            id: auth.user!.id,
+                            name: auth.user!.name,
+                            username: auth.user!.username,
+                            avatar: auth.user!.avatar ?? null,
+                        }}
                         onTypingChange={setLocalTyping}
+                        onOptimistic={(message) => {
+                            appendOrReplaceLive(message);
+                            bumpInboxPreview(
+                                conversation.id,
+                                snippetFor(message) || null,
+                                message.created_at,
+                                false,
+                            );
+                        }}
+                        onConfirmed={(message, clientId) => {
+                            appendOrReplaceLive(message, clientId);
+                            bumpInboxPreview(
+                                conversation.id,
+                                snippetFor(message) || null,
+                                message.created_at,
+                                false,
+                            );
+                            setScrollToken((n) => n + 1);
+                        }}
+                        onFailed={(clientId) => {
+                            setLiveMessages((current) =>
+                                current.filter((item) => item.id !== clientId),
+                            );
+                        }}
                         onSent={() => {
                             setLocalTyping(false);
                             setScrollToken((n) => n + 1);
