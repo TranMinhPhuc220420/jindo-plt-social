@@ -1,9 +1,4 @@
-import {
-    Children,
-    cloneElement,
-    Fragment,
-    isValidElement,
-} from 'react';
+import { Children, cloneElement, Fragment, isValidElement } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';

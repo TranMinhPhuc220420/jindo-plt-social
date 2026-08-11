@@ -28,13 +28,7 @@ type Props = {
     tags: TagSummary[];
 };
 
-export default function SearchIndex({
-    query,
-    tab,
-    users,
-    posts,
-    tags,
-}: Props) {
+export default function SearchIndex({ query, tab, users, posts, tags }: Props) {
     const getInitials = useInitials();
 
     const placeholder =
@@ -121,7 +115,7 @@ export default function SearchIndex({
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div className="min-w-0">
-                                                <p className="font-semibold leading-tight">
+                                                <p className="leading-tight font-semibold">
                                                     {user.name}
                                                 </p>
                                                 <p className="text-sm text-muted-foreground">
@@ -198,10 +192,7 @@ export default function SearchIndex({
                                 variant="outline"
                                 className="w-full"
                             >
-                                <Link
-                                    href={posts.next_page_url}
-                                    preserveScroll
-                                >
+                                <Link href={posts.next_page_url} preserveScroll>
                                     Load more
                                 </Link>
                             </Button>

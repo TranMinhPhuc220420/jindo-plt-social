@@ -1,9 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import {
-    motion,
-    useScroll,
-    useTransform,
-} from 'motion/react';
+import { motion, useScroll, useTransform } from 'motion/react';
 import { FadeIn } from '@/components/motion/fade-in';
 import { usePrefersReducedMotion } from '@/components/motion/use-prefers-reduced-motion';
 import { login, register } from '@/routes';
@@ -90,8 +86,8 @@ export default function Welcome() {
                     </FadeIn>
                     <FadeIn delay={0.2} y={16}>
                         <p className="mt-4 max-w-lg text-lg text-muted-foreground">
-                            Share updates, follow friends, and stay in the loop —
-                            a social home built for real conversations.
+                            Share updates, follow friends, and stay in the loop
+                            — a social home built for real conversations.
                         </p>
                     </FadeIn>
                     {!auth.user ? (

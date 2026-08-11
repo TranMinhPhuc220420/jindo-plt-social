@@ -36,9 +36,8 @@ function snippetText(body: string): string {
 function isInteractiveTarget(target: EventTarget | null): boolean {
     return (
         target instanceof Element &&
-        target.closest(
-            'a, button, input, textarea, select, [role="button"]',
-        ) != null
+        target.closest('a, button, input, textarea, select, [role="button"]') !=
+            null
     );
 }
 
@@ -121,7 +120,10 @@ export function SharedPostEmbed({
                 className,
             )}
             onClick={(event) => {
-                if (isInteractiveTarget(event.target) || event.defaultPrevented) {
+                if (
+                    isInteractiveTarget(event.target) ||
+                    event.defaultPrevented
+                ) {
                     return;
                 }
 

@@ -83,8 +83,7 @@ export default function ProfileFollowers({ profile, users }: Props) {
                         href={`/u/${profile.username}`}
                         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
                     >
-                        <ArrowLeft className="size-4" />
-                        @{profile.username}
+                        <ArrowLeft className="size-4" />@{profile.username}
                     </Link>
                     <h1 className="mt-2 text-lg font-semibold">Followers</h1>
                 </div>

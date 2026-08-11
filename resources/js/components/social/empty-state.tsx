@@ -8,12 +8,7 @@ type Props = {
     className?: string;
 };
 
-export function EmptyState({
-    title,
-    description,
-    action,
-    className,
-}: Props) {
+export function EmptyState({ title, description, action, className }: Props) {
     return (
         <div
             className={cn(

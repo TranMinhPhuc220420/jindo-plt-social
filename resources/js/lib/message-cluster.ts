@@ -88,8 +88,7 @@ export function getMessageClusterMeta(
     const prevTime = prev ? messageTime(prev) : 0;
     const currTime = messageTime(message);
     const showDaySeparator =
-        isFirstInGroup &&
-        (!prev || !sameDay(prevTime, currTime));
+        isFirstInGroup && (!prev || !sameDay(prevTime, currTime));
 
     return {
         isFirstInGroup,

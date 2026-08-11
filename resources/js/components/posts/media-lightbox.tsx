@@ -10,12 +10,7 @@ type Props = {
     onClose: () => void;
 };
 
-export function MediaLightbox({
-    media,
-    index,
-    onIndexChange,
-    onClose,
-}: Props) {
+export function MediaLightbox({ media, index, onIndexChange, onClose }: Props) {
     const current = media[Math.min(Math.max(index, 0), media.length - 1)];
     const canPrev = index > 0;
     const canNext = index < media.length - 1;

@@ -1,5 +1,11 @@
 import { usePage } from '@inertiajs/react';
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
+import {
+    useCallback,
+    useEffect,
+    useEffectEvent,
+    useRef,
+    useState,
+} from 'react';
 import echo from '@/echo';
 import type { Auth, ChatMessage } from '@/types';
 
@@ -124,9 +130,7 @@ export function useConversationRealtime(
         (typing: boolean) => {
             const payload: WhisperPayload = {
                 typing,
-                user: self
-                    ? { id: self.id, name: self.name }
-                    : undefined,
+                user: self ? { id: self.id, name: self.name } : undefined,
             };
 
             const channel = channelRef.current;

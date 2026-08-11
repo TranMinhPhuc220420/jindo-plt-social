@@ -17,8 +17,7 @@ export default function AppSocialLayout({
     hideRightRail = false,
 }: Props) {
     const { component } = usePage();
-    const showTrending =
-        !hideRightRail && shouldShowTrendingRail(component);
+    const showTrending = !hideRightRail && shouldShowTrendingRail(component);
 
     return (
         <SocialChromeShell

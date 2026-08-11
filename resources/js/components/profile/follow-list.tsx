@@ -15,10 +15,7 @@ export function FollowList({ users }: Props) {
     return (
         <ul className="divide-y">
             {users.map((user) => (
-                <li
-                    key={user.id}
-                    className="flex items-center gap-3 px-1 py-3"
-                >
+                <li key={user.id} className="flex items-center gap-3 px-1 py-3">
                     <Link
                         href={`/u/${user.username}`}
                         className="flex min-w-0 flex-1 items-center gap-3"

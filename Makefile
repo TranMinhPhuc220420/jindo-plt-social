@@ -1,6 +1,6 @@
 # Makefile
 
-.PHONY: start build clear redis redis-stop test migrate seed seed-local seed-admin migrate_and_seed deploy run_xampp format pre-commit ci-check
+.PHONY: start build clear redis redis-stop test migrate seed seed-local migrate_and_seed deploy run_xampp format pre-commit pre-deploy ci-check
 
 # Start the development server
 start:
@@ -45,12 +45,9 @@ migrate:
 # Seed — default is local full demo
 seed: seed-local
 
-# Local / non-production: full demo (DatabaseSeeder)
+# Local / non-production: full demo (DatabaseSeeder). Do not seed on production.
 seed-local:
 	php artisan db:seed
-
-seed-admin:
-	php artisan db:seed --class=ProductionBootstrapSeeder --force
 
 migrate_and_seed:
 	make clear
@@ -74,9 +71,12 @@ format:
 	composer lint
 
 # Fix style, then run the same checks GitHub Actions runs via `composer ci:check`
-# Usage: make pre-commit
+# Usage: make pre-commit  (alias: make pre-deploy)
+# After green checks: commit + push main → CI uploads deploy.zip (see docs/OPS_RUNBOOK.md)
 pre-commit: format
 	composer ci:check
+
+pre-deploy: pre-commit
 
 # Run CI checks only (no auto-fix) — same as GitHub Actions
 ci-check:

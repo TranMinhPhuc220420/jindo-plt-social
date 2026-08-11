@@ -234,9 +234,7 @@ export function MessageThread({
                                             ) : null}
                                             {message.shared_post ? (
                                                 <SharedPostEmbed
-                                                    shared={
-                                                        message.shared_post
-                                                    }
+                                                    shared={message.shared_post}
                                                     variant="snippet"
                                                     className={cn(
                                                         'mt-1.5',
@@ -283,10 +281,7 @@ export function MessageThread({
                         })
                     )}
                     <div className="mt-1">
-                        <TypingIndicator
-                            name={typingName}
-                            variant="bubble"
-                        />
+                        <TypingIndicator name={typingName} variant="bubble" />
                     </div>
                 </div>
             </div>

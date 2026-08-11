@@ -1,9 +1,4 @@
-import {
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent, RefObject } from 'react';
 import { MediaLightbox } from '@/components/posts/media-lightbox';
 import { cn } from '@/lib/utils';
@@ -74,23 +69,23 @@ function useTallestFrame(media: PostMediaItem[]): FrameSize {
 
         let cancelled = false;
 
-        void Promise.all(media.map((item) => measureNaturalSize(item.url))).then(
-            (sizes) => {
-                if (cancelled) {
-                    return;
+        void Promise.all(
+            media.map((item) => measureNaturalSize(item.url)),
+        ).then((sizes) => {
+            if (cancelled) {
+                return;
+            }
+
+            let tallest: FrameSize = { width: 1, height: 1 };
+
+            for (const size of sizes) {
+                if (isTaller(size, tallest)) {
+                    tallest = size;
                 }
+            }
 
-                let tallest: FrameSize = { width: 1, height: 1 };
-
-                for (const size of sizes) {
-                    if (isTaller(size, tallest)) {
-                        tallest = size;
-                    }
-                }
-
-                setMeasuredFrame(tallest);
-            },
-        );
+            setMeasuredFrame(tallest);
+        });
 
         return () => {
             cancelled = true;
@@ -126,7 +121,9 @@ function useSyncedFrameHeight(
                 window.innerHeight * MAX_FRAME_HEIGHT_VH,
             );
 
-            setHeight(Math.max(1, Math.round(Math.min(naturalHeight, maxHeight))));
+            setHeight(
+                Math.max(1, Math.round(Math.min(naturalHeight, maxHeight))),
+            );
         };
 
         update();
@@ -256,7 +253,7 @@ export function MediaCarousel({ media }: Props) {
                 ) : null}
 
                 {multi ? (
-                    <div className="pointer-events-none absolute top-3 right-3 z-10 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium tabular-nums tracking-wide text-white shadow-sm backdrop-blur-md">
+                    <div className="pointer-events-none absolute top-3 right-3 z-10 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium tracking-wide text-white tabular-nums shadow-sm backdrop-blur-md">
                         {index + 1}
                         <span className="mx-0.5 text-white/55">/</span>
                         {media.length}

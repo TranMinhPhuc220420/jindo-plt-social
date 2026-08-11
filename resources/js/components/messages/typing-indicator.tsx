@@ -69,10 +69,7 @@ export function TypingIndicator({
                     animate={{ opacity: 1, y: 0 }}
                     exit={reduce ? undefined : { opacity: 0, y: 4 }}
                     transition={{ duration: 0.18 }}
-                    className={cn(
-                        'flex items-end gap-2',
-                        className,
-                    )}
+                    className={cn('flex items-end gap-2', className)}
                     role="status"
                     aria-live="polite"
                     aria-label={`${name} is typing`}

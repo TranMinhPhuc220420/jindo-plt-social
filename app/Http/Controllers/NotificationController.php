@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Support\NotificationPresenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,14 +18,15 @@ class NotificationController extends Controller
             ->paginate(20);
 
         // Present before marking so the first paint can still show “New” styling.
-        $paginator->setCollection(
-            collect(NotificationPresenter::collection($paginator->getCollection())),
-        );
+        $presented = collect(NotificationPresenter::collection($paginator->getCollection()))
+            ->keyBy('id');
 
         $request->user()->unreadNotifications->markAsRead();
 
         return Inertia::render('notifications/index', [
-            'notifications' => $paginator,
+            'notifications' => $paginator->through(
+                fn (DatabaseNotification $notification): array => $presented->get($notification->id) ?? [],
+            ),
         ]);
     }
 

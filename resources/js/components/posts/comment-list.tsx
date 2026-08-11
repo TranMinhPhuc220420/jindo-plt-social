@@ -34,7 +34,10 @@ export function CommentList({ postId, comments }: Props) {
             {comments.map((comment) => (
                 <li key={comment.id} className="space-y-3">
                     <div className="flex gap-3">
-                        <Link href={`/u/${comment.user.username}`} className="shrink-0">
+                        <Link
+                            href={`/u/${comment.user.username}`}
+                            className="shrink-0"
+                        >
                             <Avatar className="size-8">
                                 <AvatarImage
                                     src={comment.user.avatar ?? undefined}
@@ -59,7 +62,7 @@ export function CommentList({ postId, comments }: Props) {
                             </div>
                             <p
                                 className={cn(
-                                    'whitespace-pre-wrap text-sm',
+                                    'text-sm whitespace-pre-wrap',
                                     isEmojiOnly(comment.body) &&
                                         'text-[2rem] leading-none',
                                 )}
@@ -143,7 +146,10 @@ export function CommentList({ postId, comments }: Props) {
                                     >
                                         <Avatar className="size-7">
                                             <AvatarImage
-                                                src={reply.user.avatar ?? undefined}
+                                                src={
+                                                    reply.user.avatar ??
+                                                    undefined
+                                                }
                                                 alt={reply.user.name}
                                             />
                                             <AvatarFallback>
@@ -165,7 +171,7 @@ export function CommentList({ postId, comments }: Props) {
                                         </div>
                                         <p
                                             className={cn(
-                                                'whitespace-pre-wrap text-sm',
+                                                'text-sm whitespace-pre-wrap',
                                                 isEmojiOnly(reply.body) &&
                                                     'text-[2rem] leading-none',
                                             )}
@@ -180,7 +186,9 @@ export function CommentList({ postId, comments }: Props) {
                                             <Form
                                                 method="delete"
                                                 action={`/comments/${reply.id}`}
-                                                options={{ preserveScroll: true }}
+                                                options={{
+                                                    preserveScroll: true,
+                                                }}
                                             >
                                                 {({ processing }) => (
                                                     <Button

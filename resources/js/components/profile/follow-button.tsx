@@ -48,18 +48,12 @@ export function FollowButton({
                             'disabled:pointer-events-none disabled:opacity-60',
                             !isFollowing &&
                                 'text-[#0095F6] hover:text-[#1877F2]',
-                            isFollowing &&
-                                !hovering &&
-                                'text-foreground',
-                            isFollowing &&
-                                hovering &&
-                                'text-red-500',
+                            isFollowing && !hovering && 'text-foreground',
+                            isFollowing && hovering && 'text-red-500',
                             className,
                         )}
                     >
-                        {processing ? (
-                            <Spinner className="size-3.5" />
-                        ) : null}
+                        {processing ? <Spinner className="size-3.5" /> : null}
                         {!isFollowing
                             ? 'Follow'
                             : hovering

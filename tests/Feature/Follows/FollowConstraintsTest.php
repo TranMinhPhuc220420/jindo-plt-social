@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Follow;
+use App\Models\Post;
 use App\Models\User;
 
 test('users can follow and unfollow another user', function () {
@@ -29,7 +30,7 @@ test('users can follow and unfollow another user', function () {
 test('explore post payload includes author follow state', function () {
     $viewer = User::factory()->create();
     $author = User::factory()->create();
-    $post = \App\Models\Post::factory()->for($author)->create();
+    $post = Post::factory()->for($author)->create();
 
     $this->actingAs($viewer)
         ->get(route('explore'))

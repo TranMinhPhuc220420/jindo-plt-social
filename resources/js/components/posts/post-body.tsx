@@ -34,19 +34,19 @@ export function PostBody({ body, clamp = true }: Props) {
     const collapsed = offerExpand && !expanded;
 
     return (
-        <div className="mt-1.5 min-w-0 max-w-full">
+        <div className="mt-1.5 max-w-full min-w-0">
             <div
                 className={cn(
-                    'min-w-0 max-w-full overflow-hidden break-words text-[15px] leading-snug',
+                    'max-w-full min-w-0 overflow-hidden text-[15px] leading-snug break-words',
                     collapsed && 'line-clamp-4',
                 )}
             >
                 <PostMarkdown
                     body={body}
                     className={cn(
-                        'post-markdown min-w-0 max-w-full [&_*]:max-w-full',
+                        'post-markdown max-w-full min-w-0 [&_*]:max-w-full',
                         '[&_p]:my-0 [&_p+p]:mt-2',
-                        '[&_ul]:my-1 [&_ol]:my-1',
+                        '[&_ol]:my-1 [&_ul]:my-1',
                         '[&_pre]:my-2',
                         '[&_blockquote]:my-2',
                     )}

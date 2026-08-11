@@ -35,7 +35,8 @@ function SingleMedia({
     item: PostMediaItem;
     onOpen: () => void;
 }) {
-    const hasRatio = item.width != null && item.height != null && item.height > 0;
+    const hasRatio =
+        item.width != null && item.height != null && item.height > 0;
 
     return (
         <button

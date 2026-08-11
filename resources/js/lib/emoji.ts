@@ -33,7 +33,8 @@ export function graphemeCount(text: string): number {
 
 const HAS_LETTER_OR_DIGIT = /\p{L}|\p{N}/u;
 /** Rough emoji / symbol mark presence (ZWJ sequences, regional indicators, etc.). */
-const HAS_EMOJIISH = /\p{Extended_Pictographic}|\p{Emoji_Presentation}|[\u{1F1E6}-\u{1F1FF}]/u;
+const HAS_EMOJIISH =
+    /\p{Extended_Pictographic}|\p{Emoji_Presentation}|[\u{1F1E6}-\u{1F1FF}]/u;
 
 /**
  * True when trimmed text is 1–3 emoji graphemes with no letters/digits —

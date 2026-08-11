@@ -67,7 +67,10 @@ export function IntroCard({ fields, username, isOwn, joinedAt }: Props) {
                                             rel="noopener noreferrer"
                                             className="font-semibold text-primary hover:underline"
                                         >
-                                            {field.value.replace(/^https?:\/\//, '')}
+                                            {field.value.replace(
+                                                /^https?:\/\//,
+                                                '',
+                                            )}
                                         </a>
                                     ) : (
                                         <span className="font-semibold">

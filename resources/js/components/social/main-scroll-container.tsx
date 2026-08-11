@@ -1,7 +1,4 @@
-import {
-    createContext,
-    useContext,
-} from 'react';
+import { createContext, useContext } from 'react';
 import type { RefObject } from 'react';
 
 export const MainScrollContainerContext =

@@ -10,12 +10,7 @@ type Props = {
     y?: number;
 };
 
-export function FadeIn({
-    children,
-    className,
-    delay = 0,
-    y = 12,
-}: Props) {
+export function FadeIn({ children, className, delay = 0, y = 12 }: Props) {
     const reduce = usePrefersReducedMotion();
 
     if (reduce) {

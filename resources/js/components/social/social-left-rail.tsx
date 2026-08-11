@@ -62,8 +62,7 @@ export function SocialLeftRail() {
                                 }
                                 className={cn(
                                     'relative z-10 flex items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted/80',
-                                    active &&
-                                        'font-semibold text-primary',
+                                    active && 'font-semibold text-primary',
                                     active && reduce && 'bg-primary/10',
                                 )}
                             >

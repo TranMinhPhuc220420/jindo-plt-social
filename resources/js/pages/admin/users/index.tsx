@@ -73,7 +73,9 @@ export default function AdminUsersIndex({ users }: Props) {
                                 <th className="px-3 py-2 font-medium">User</th>
                                 <th className="px-3 py-2 font-medium">Email</th>
                                 <th className="px-3 py-2 font-medium">Role</th>
-                                <th className="px-3 py-2 font-medium">Status</th>
+                                <th className="px-3 py-2 font-medium">
+                                    Status
+                                </th>
                                 <th className="px-3 py-2 font-medium">
                                     Actions
                                 </th>

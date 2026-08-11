@@ -138,8 +138,8 @@ export default function Profile({
                                             defaultValue={auth.user.bio ?? ''}
                                             placeholder="A short intro"
                                             className={cn(
-                                                'border-input flex min-h-20 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none',
-                                                'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+                                                'flex min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none',
+                                                'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
                                             )}
                                         />
                                         <InputError message={errors.bio} />
@@ -227,8 +227,8 @@ export default function Profile({
                                                             field.visibility
                                                         }
                                                         className={cn(
-                                                            'border-input h-9 w-full rounded-md border bg-transparent px-2 text-sm shadow-xs outline-none',
-                                                            'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+                                                            'h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm shadow-xs outline-none',
+                                                            'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
                                                         )}
                                                         aria-label={`${field.label} visibility`}
                                                     >
@@ -263,14 +263,8 @@ export default function Profile({
                                 >
                                     Save changes
                                 </Button>
-                                <Button
-                                    asChild
-                                    variant="ghost"
-                                    type="button"
-                                >
-                                    <Link href={profileUrl}>
-                                        View profile
-                                    </Link>
+                                <Button asChild variant="ghost" type="button">
+                                    <Link href={profileUrl}>View profile</Link>
                                 </Button>
                             </div>
                         </>

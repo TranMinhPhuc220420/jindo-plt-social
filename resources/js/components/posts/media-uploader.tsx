@@ -174,8 +174,7 @@ export function MediaUploader({
                         htmlFor={pickerId}
                         className={cn(
                             'inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-primary hover:bg-primary/10',
-                            slotsLeft === 0 &&
-                                'pointer-events-none opacity-50',
+                            slotsLeft === 0 && 'pointer-events-none opacity-50',
                         )}
                     >
                         <ImagePlus className="size-4" />

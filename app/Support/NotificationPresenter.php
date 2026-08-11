@@ -43,9 +43,9 @@ class NotificationPresenter
             ? collect()
             : Post::query()->with('media')->whereIn('id', $postIds)->get()->keyBy('id');
 
-        return $items
+        return array_values($items
             ->map(fn (DatabaseNotification $notification) => self::toArray($notification, $actors, $posts))
-            ->all();
+            ->all());
     }
 
     /**
@@ -79,7 +79,7 @@ class NotificationPresenter
         $data = $notification->data;
         $actorId = $data['actor_id'] ?? null;
         $actor = $actorId !== null
-            ? ($actors?->get($actorId) ?? User::query()->find($actorId))
+            ? ($actors?->get($actorId) ?? User::query()->whereKey($actorId)->first())
             : null;
 
         $data['actor_avatar'] = $actor?->avatarUrl()
@@ -97,7 +97,7 @@ class NotificationPresenter
         $postId = $data['post_id'] ?? null;
         if ($postId !== null) {
             $post = $posts?->get($postId)
-                ?? Post::query()->with('media')->find($postId);
+                ?? Post::query()->with('media')->whereKey($postId)->first();
             $data['post_image'] = self::postImageUrl($post);
         } else {
             $data['post_image'] = is_string($data['post_image'] ?? null) ? $data['post_image'] : '';

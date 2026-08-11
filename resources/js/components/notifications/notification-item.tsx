@@ -78,11 +78,7 @@ function TypeBadge({ item }: { item: AppNotification }) {
     );
 }
 
-export function NotificationItem({
-    item,
-    compact = false,
-    onOpen,
-}: Props) {
+export function NotificationItem({ item, compact = false, onOpen }: Props) {
     const getInitials = useInitials();
     const unread = !item.read_at;
     const name =

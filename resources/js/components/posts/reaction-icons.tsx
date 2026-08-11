@@ -173,18 +173,12 @@ function CelebrateIcon({ className }: IconProps) {
             <circle cx="29.2" cy="12.4" r="1.25" fill="#FF6B6B" />
             <circle cx="10" cy="23.2" r="1.1" fill="#7B66FF" />
             <circle cx="28.4" cy="22.6" r="1" fill="#34D399" />
-            <path
-                fill="#fff"
-                d="m14.8 29 13-13 2 2-13 13-4.1 1.6 2.1-3.6Z"
-            />
+            <path fill="#fff" d="m14.8 29 13-13 2 2-13 13-4.1 1.6 2.1-3.6Z" />
             <path
                 fill="#E67E22"
                 d="m16.2 26.8 9.6-9.6 1.6 1.6-9.6 9.6-3 1.1.8-2.7Z"
             />
-            <path
-                fill="#FFD89A"
-                d="m18.6 24.4 4.8-4.8 1 1-4.8 4.8-1-1Z"
-            />
+            <path fill="#FFD89A" d="m18.6 24.4 4.8-4.8 1 1-4.8 4.8-1-1Z" />
         </Badge>
     );
 }
@@ -223,7 +217,13 @@ function InsightfulIcon({ className }: IconProps) {
                 fill="#FFF4B8"
                 d="M20 11.2a5.6 5.6 0 0 0-3 10.3v1.15h6V21.5A5.6 5.6 0 0 0 20 11.2Z"
             />
-            <circle cx="20" cy="15.2" r="1.35" fill="#F5C518" fillOpacity="0.55" />
+            <circle
+                cx="20"
+                cy="15.2"
+                r="1.35"
+                fill="#F5C518"
+                fillOpacity="0.55"
+            />
             <path
                 stroke="#fff"
                 strokeWidth="1.4"

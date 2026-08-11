@@ -61,7 +61,11 @@ export default function ProfileShow({
                         )}
 
                         {posts.next_page_url ? (
-                            <Button asChild variant="outline" className="w-full">
+                            <Button
+                                asChild
+                                variant="outline"
+                                className="w-full"
+                            >
                                 <Link href={posts.next_page_url} preserveScroll>
                                     Load more
                                 </Link>

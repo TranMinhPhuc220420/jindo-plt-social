@@ -11,7 +11,12 @@ import { useConversationRealtime } from '@/hooks/use-conversation-realtime';
 import { useInitials } from '@/hooks/use-initials';
 import { useVisualViewportBottomInset } from '@/hooks/use-visual-viewport';
 import { cn } from '@/lib/utils';
-import type { Auth, ChatMessage, ConversationSummary, MessageUser } from '@/types';
+import type {
+    Auth,
+    ChatMessage,
+    ConversationSummary,
+    MessageUser,
+} from '@/types';
 
 type Props = {
     conversation: {
@@ -48,7 +53,9 @@ type InboxPreview = {
     unread_count?: number;
 };
 
-function sortByLastMessage(items: ConversationSummary[]): ConversationSummary[] {
+function sortByLastMessage(
+    items: ConversationSummary[],
+): ConversationSummary[] {
     return [...items].sort((a, b) => {
         const aTime = a.last_message?.created_at
             ? new Date(a.last_message.created_at).getTime()
@@ -125,8 +132,7 @@ export default function MessagesShow({
                     body: override.body,
                     created_at: override.created_at,
                 },
-                unread_count:
-                    override.unread_count ?? item.unread_count ?? 0,
+                unread_count: override.unread_count ?? item.unread_count ?? 0,
             };
         });
 
@@ -174,9 +180,7 @@ export default function MessagesShow({
             headers: {
                 Accept: 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
-                ...(token
-                    ? { 'X-XSRF-TOKEN': decodeURIComponent(token) }
-                    : {}),
+                ...(token ? { 'X-XSRF-TOKEN': decodeURIComponent(token) } : {}),
             },
             credentials: 'same-origin',
         })
@@ -223,9 +227,7 @@ export default function MessagesShow({
                         {
                             ...payload,
                             is_mine: mine,
-                            read_at: mine
-                                ? null
-                                : new Date().toISOString(),
+                            read_at: mine ? null : new Date().toISOString(),
                         },
                     ];
                 });
@@ -312,11 +314,7 @@ export default function MessagesShow({
                                         />
                                     ) : (
                                         <p className="h-4 truncate text-xs text-muted-foreground">
-                                            @
-                                            {
-                                                conversation.other_user
-                                                    .username
-                                            }
+                                            @{conversation.other_user.username}
                                         </p>
                                     )}
                                 </div>

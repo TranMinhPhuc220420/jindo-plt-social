@@ -213,9 +213,7 @@ export function LikeButton({
                 {pickerOpen ? (
                     <motion.div
                         initial={
-                            reduce
-                                ? false
-                                : { opacity: 0, y: 12, scale: 0.85 }
+                            reduce ? false : { opacity: 0, y: 12, scale: 0.85 }
                         }
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={
@@ -262,7 +260,7 @@ export function LikeButton({
                                                         y: 0,
                                                     }}
                                                     exit={{ opacity: 0, y: 2 }}
-                                                    className="absolute -top-7 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold tracking-wide text-background whitespace-nowrap"
+                                                    className="absolute -top-7 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold tracking-wide whitespace-nowrap text-background"
                                                 >
                                                     {item.label}
                                                 </motion.span>
@@ -369,10 +367,7 @@ export function LikeButton({
                     className="relative inline-flex shrink-0 items-center"
                 >
                     {compact && community.length > 0 ? (
-                        <span
-                            className="inline-flex items-center"
-                            aria-hidden
-                        >
+                        <span className="inline-flex items-center" aria-hidden>
                             {community.map((type, index) => (
                                 <span
                                     key={type}
@@ -423,7 +418,7 @@ export function LikeButton({
                 </motion.span>
                 {compact ? (
                     showCount && likesCount > 0 ? (
-                        <span className="tabular-nums text-muted-foreground">
+                        <span className="text-muted-foreground tabular-nums">
                             ({likesCount})
                         </span>
                     ) : null

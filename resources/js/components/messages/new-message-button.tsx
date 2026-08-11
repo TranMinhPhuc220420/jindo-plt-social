@@ -97,11 +97,7 @@ export function NewMessageButton({ className, label }: Props) {
             aria-label="New message"
             onClick={() => setOpen(true)}
         >
-            {label ? (
-                label
-            ) : (
-                <PenSquare className="size-5" aria-hidden />
-            )}
+            {label ? label : <PenSquare className="size-5" aria-hidden />}
         </Button>
     );
 

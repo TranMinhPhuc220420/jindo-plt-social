@@ -141,7 +141,7 @@ export function PostComposerShell({
                 <DialogContent
                     className={cn(
                         'flex max-h-[min(90vh,720px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg',
-                        'max-lg:top-auto max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:max-h-[min(92dvh,800px)] max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:rounded-t-2xl max-lg:rounded-b-none',
+                        'max-lg:top-auto max-lg:right-0 max-lg:bottom-0 max-lg:left-0 max-lg:max-h-[min(92dvh,800px)] max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:rounded-t-2xl max-lg:rounded-b-none',
                     )}
                     onPointerDownOutside={(event) => {
                         if (isDirty) {
@@ -229,7 +229,7 @@ export function PostComposerShell({
                                             setBody(event.target.value)
                                         }
                                         className={cn(
-                                            'placeholder:text-muted-foreground min-h-28 w-full resize-none border-0 bg-transparent text-lg outline-none',
+                                            'min-h-28 w-full resize-none border-0 bg-transparent text-lg outline-none placeholder:text-muted-foreground',
                                             'focus-visible:ring-0',
                                         )}
                                     />
@@ -291,9 +291,7 @@ export function PostComposerShell({
                                         </p>
                                         <Button
                                             type="submit"
-                                            disabled={
-                                                processing || !canSubmit
-                                            }
+                                            disabled={processing || !canSubmit}
                                             className="min-w-24"
                                         >
                                             {processing ? (

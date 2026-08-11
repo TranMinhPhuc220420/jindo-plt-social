@@ -80,7 +80,7 @@ export function AboutSection({ fields, isOwn, joinedAt }: Props) {
                                 aria-hidden
                             />
                             <div>
-                                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                                     {field.label}
                                 </p>
                                 {field.key === 'website' ? (
@@ -108,7 +108,7 @@ export function AboutSection({ fields, isOwn, joinedAt }: Props) {
                             aria-hidden
                         />
                         <div>
-                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                                 Joined
                             </p>
                             <p className="text-base font-semibold">

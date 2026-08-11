@@ -69,8 +69,7 @@ export function isReactionType(
     value: string | null | undefined,
 ): value is ReactionType {
     return (
-        value != null &&
-        (REACTION_TYPES as readonly string[]).includes(value)
+        value != null && (REACTION_TYPES as readonly string[]).includes(value)
     );
 }
 

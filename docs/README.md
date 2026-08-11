@@ -12,6 +12,7 @@ Lean index. Deep detail lives in the linked folders — do not duplicate SRS her
 | [notes/](./notes/) | Blockers, scratch state, investigation | During active work |
 | [handoffs/](./handoffs/) | End-of-session handoff for the next agent | End of long sessions |
 | [prompts/](./prompts/) | Reusable Cursor prompt seeds per phase | Rarely; keep short |
+| [OPS_RUNBOOK.md](./OPS_RUNBOOK.md) | cPanel deploy / extract / queue / smoke | When ops or CI deploy changes |
 
 ## Agent read order
 

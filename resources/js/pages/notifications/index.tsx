@@ -15,9 +15,7 @@ type Props = {
 };
 
 function openNotification(notification: AppNotification): void {
-    const url = notification.data.url
-        ? String(notification.data.url)
-        : null;
+    const url = notification.data.url ? String(notification.data.url) : null;
 
     if (url) {
         router.visit(url);
@@ -45,10 +43,7 @@ function NotificationSection({
             <ul className="flex flex-col">
                 {items.map((notification) => (
                     <li key={notification.id}>
-                        <NotificationItem
-                            item={notification}
-                            onOpen={onOpen}
-                        />
+                        <NotificationItem item={notification} onOpen={onOpen} />
                     </li>
                 ))}
             </ul>
@@ -106,10 +101,7 @@ export default function NotificationsIndex({ notifications }: Props) {
 
                 {notifications.next_page_url ? (
                     <Button asChild variant="outline" className="w-full">
-                        <Link
-                            href={notifications.next_page_url}
-                            preserveScroll
-                        >
+                        <Link href={notifications.next_page_url} preserveScroll>
                             Load more
                         </Link>
                     </Button>

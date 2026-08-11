@@ -1,0 +1,133 @@
+name: CI / Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: "8.4"
+          tools: composer:v2
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      - name: Install dependencies and build
+        run: |
+          composer install --prefer-dist --no-interaction
+          npm ci
+          npm run build
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      # Runs lint:check, format:check, types:check (ESLint/Prettier/tsc + Pint/PHPStan) and the Pest suite.
+      # Requires no secrets beyond what's already in .env.example (SQLite test DB).
+      - name: Run CI Checks
+        run: composer ci:check
+
+  deploy:
+    needs: [ci]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: "8.4"
+          tools: composer:v2
+          extensions: mbstring, pdo_mysql
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies and build
+        run: |
+          composer install --no-dev --optimize-autoloader
+          npm ci
+          npm run build
+
+      # Same pattern as vsport-3: zip the release, FTP only the zip.
+      # Extract manually in cPanel File Manager after upload — see docs/OPS_RUNBOOK.md.
+      - name: Create deploy.zip
+        run: |
+          set -euo pipefail
+
+          # Dev / CI / agent noise — never ship to cPanel
+          rm -rf .git .github tests node_modules
+          rm -rf .agents .cursor .hallmark docs
+          rm -rf .env .env.* .env.backup
+
+          # Do not package local absolute symlink (recreate on server via storage:link)
+          rm -f public/storage public/hot
+
+          # Keep storage skeleton; drop runtime uploads / caches / logs
+          find storage/logs -type f ! -name '.gitignore' -delete 2>/dev/null || true
+          find storage/framework/cache -type f ! -name '.gitignore' -delete 2>/dev/null || true
+          find storage/framework/sessions -type f ! -name '.gitignore' -delete 2>/dev/null || true
+          find storage/framework/views -type f ! -name '.gitignore' -delete 2>/dev/null || true
+          find storage/app/public -type f ! -name '.gitignore' -delete 2>/dev/null || true
+          if [ -d storage/app/private ]; then
+            find storage/app/private -type f ! -name '.gitignore' -delete 2>/dev/null || true
+          fi
+
+          if [ -f htaccess ]; then
+            mv htaccess .htaccess
+          fi
+
+          mkdir -p deploy-bundle
+          # -x excludes; store relative paths only. Never include secrets or the bundle itself.
+          zip -r deploy-bundle/deploy.zip . \
+            -x "deploy-bundle/*" \
+            -x ".env" \
+            -x ".env.*" \
+            -x "*.env" \
+            -x ".git/*" \
+            -x ".github/*" \
+            -x "node_modules/*" \
+            -x "tests/*"
+
+      - name: Upload deploy.zip via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: ./deploy-bundle/
+          server-dir: /

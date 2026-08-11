@@ -45,9 +45,7 @@ export function ConversationInbox({
             const username = item.other_user?.username?.toLowerCase() ?? '';
             const body = item.last_message?.body?.toLowerCase() ?? '';
 
-            return (
-                name.includes(q) || username.includes(q) || body.includes(q)
-            );
+            return name.includes(q) || username.includes(q) || body.includes(q);
         });
     }, [conversations, query]);
 
@@ -84,7 +82,7 @@ export function ConversationInbox({
                             className={cn(
                                 'h-10 w-full rounded-full border-0 bg-muted pr-10 pl-9 text-sm outline-none',
                                 'placeholder:text-muted-foreground',
-                                'focus-visible:ring-ring focus-visible:ring-2',
+                                'focus-visible:ring-2 focus-visible:ring-ring',
                             )}
                         />
                         {query ? (
@@ -134,22 +132,20 @@ export function ConversationInbox({
                                                         undefined
                                                     }
                                                     alt={
-                                                        item.other_user
-                                                            ?.name ?? ''
+                                                        item.other_user?.name ??
+                                                        ''
                                                     }
                                                 />
                                                 <AvatarFallback>
                                                     {getInitials(
-                                                        item.other_user
-                                                            ?.name ?? '?',
+                                                        item.other_user?.name ??
+                                                            '?',
                                                     )}
                                                 </AvatarFallback>
                                             </Avatar>
                                             {unread > 0 && !isActive ? (
                                                 <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-                                                    {unread > 9
-                                                        ? '9+'
-                                                        : unread}
+                                                    {unread > 9 ? '9+' : unread}
                                                 </span>
                                             ) : null}
                                         </div>
@@ -158,8 +154,7 @@ export function ConversationInbox({
                                                 <p
                                                     className={cn(
                                                         'truncate text-sm',
-                                                        unread > 0 &&
-                                                            !isActive
+                                                        unread > 0 && !isActive
                                                             ? 'font-bold'
                                                             : 'font-semibold',
                                                     )}

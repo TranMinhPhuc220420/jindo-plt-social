@@ -50,10 +50,7 @@ export function ProfileHeader({ profile, activeTab = 'posts' }: Props) {
                 </motion.div>
                 {profile.is_own ? (
                     <div className="absolute right-3 bottom-3 z-10">
-                        <ProfileMediaButton
-                            kind="cover"
-                            className="h-9 px-3"
-                        />
+                        <ProfileMediaButton kind="cover" className="h-9 px-3" />
                     </div>
                 ) : null}
             </div>
@@ -114,7 +111,7 @@ export function ProfileHeader({ profile, activeTab = 'posts' }: Props) {
                     </div>
                 </div>
                 <div>
-                    <h1 className="text-2xl font-bold leading-tight">
+                    <h1 className="text-2xl leading-tight font-bold">
                         {profile.name}
                     </h1>
                     <p className="text-muted-foreground">@{profile.username}</p>

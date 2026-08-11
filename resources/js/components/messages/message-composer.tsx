@@ -208,8 +208,8 @@ export function MessageComposer({
                                 }
                             }}
                             className={cn(
-                                'placeholder:text-muted-foreground max-h-[120px] min-h-11 flex-1 resize-none rounded-2xl border-0 bg-muted px-3 py-2.5 text-sm outline-none',
-                                'focus-visible:ring-ring focus-visible:ring-2',
+                                'max-h-[120px] min-h-11 flex-1 resize-none rounded-2xl border-0 bg-muted px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground',
+                                'focus-visible:ring-2 focus-visible:ring-ring',
                             )}
                         />
 

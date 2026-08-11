@@ -16,10 +16,7 @@ const TABS: { id: Tab; label: string; href: (username: string) => string }[] = [
 
 export function ProfileTabs({ username, active }: Props) {
     return (
-        <nav
-            className="flex gap-1 border-t pt-1"
-            aria-label="Profile sections"
-        >
+        <nav className="flex gap-1 border-t pt-1" aria-label="Profile sections">
             {TABS.map((tab) => {
                 const isActive = tab.id === active;
 

@@ -1,7 +1,4 @@
-import EmojiPicker, {
-    EmojiStyle,
-    Theme,
-} from 'emoji-picker-react';
+import EmojiPicker, { EmojiStyle, Theme } from 'emoji-picker-react';
 import type { EmojiClickData } from 'emoji-picker-react';
 import { Smile } from 'lucide-react';
 import { useState, useSyncExternalStore } from 'react';
@@ -55,8 +52,7 @@ export function EmojiPickerButton({
     const hydrated = useHasHydrated();
     const [open, setOpen] = useState(false);
 
-    const theme =
-        resolvedAppearance === 'dark' ? Theme.DARK : Theme.LIGHT;
+    const theme = resolvedAppearance === 'dark' ? Theme.DARK : Theme.LIGHT;
 
     const picker = (
         <EmojiPicker
@@ -65,11 +61,7 @@ export function EmojiPickerButton({
             lazyLoadEmojis
             width={isMobile ? undefined : 320}
             height={isMobile ? undefined : 360}
-            style={
-                isMobile
-                    ? { width: '100%', height: '100%' }
-                    : undefined
-            }
+            style={isMobile ? { width: '100%', height: '100%' } : undefined}
             previewConfig={{ showPreview: false }}
             onEmojiClick={(data: EmojiClickData) => {
                 onSelect(data.emoji);
