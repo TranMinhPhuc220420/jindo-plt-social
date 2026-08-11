@@ -145,7 +145,11 @@ function listenForNewValue(
             }
         },
         (error) => {
-            console.warn('[realtime] RTDB listen failed', pathRef.toString(), error);
+            console.warn(
+                '[realtime] RTDB listen failed',
+                pathRef.toString(),
+                error,
+            );
         },
     );
 }
