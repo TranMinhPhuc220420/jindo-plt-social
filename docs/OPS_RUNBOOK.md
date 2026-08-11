@@ -31,6 +31,11 @@ Repo → **Settings → Secrets and variables → Actions**. Required by [`.gith
 | `FTP_HOST` | Host from cPanel FTP Accounts (often the domain or IP) |
 | `FTP_USERNAME` | Full FTP user |
 | `FTP_PASSWORD` | FTP password |
+| `VITE_FIREBASE_API_KEY` | Firebase web app config (baked into `public/build` on deploy) |
+| `VITE_FIREBASE_AUTH_DOMAIN` | e.g. `YOUR_PROJECT.firebaseapp.com` |
+| `VITE_FIREBASE_DATABASE_URL` | e.g. `https://YOUR_PROJECT-default-rtdb.firebaseio.com` |
+| `VITE_FIREBASE_PROJECT_ID` | Firebase project id |
+| `VITE_FIREBASE_APP_ID` | Firebase web app id |
 | Protocol | Workflow uses **FTPS** on port **21** |
 | `server-dir` | Workflow sends `/` — must be the FTP account home where you want `deploy.zip` (often account root; confirm in File Manager after first upload) |
 
