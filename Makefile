@@ -70,14 +70,10 @@ format:
 	npm run lint
 	composer lint
 
-# Fix style, then run the same checks GitHub Actions runs via `composer ci:check`
-# Usage: make pre-commit  (alias: make pre-deploy)
-# After green checks: commit + push main → CI uploads deploy.zip (see docs/OPS_RUNBOOK.md)
 pre-commit: format
 	composer ci:check
 
 pre-deploy: pre-commit
 
-# Run CI checks only (no auto-fix) — same as GitHub Actions
 ci-check:
 	composer ci:check
