@@ -17,7 +17,7 @@ const appName = import.meta.env.VITE_APP_NAME || 'PLT Social';
 
 // So broadcast()->toOthers() can exclude this tab on Inertia form visits (Reverb only).
 router.on('before', (event) => {
-    if (isFirebaseConfigured()) {
+    if (isFirebaseConfigured() || !echo) {
         return;
     }
 

@@ -99,8 +99,13 @@ function subscribeUserEcho(
     userId: number,
     handlers: UserRealtimeHandlers,
 ): () => void {
+    if (!echo) {
+        return () => undefined;
+    }
+
+    const client = echo;
     const channelName = `App.Models.User.${userId}`;
-    const channel = echo.private(channelName);
+    const channel = client.private(channelName);
 
     channel.notification((notification: Record<string, unknown>) => {
         handlers.onNotification(notification);
@@ -111,7 +116,7 @@ function subscribeUserEcho(
     });
 
     return () => {
-        echo.leave(channelName);
+        client.leave(channelName);
     };
 }
 
@@ -196,8 +201,16 @@ function subscribeConversationEcho(
         user: { id: number; name: string },
     ) => void;
 } {
+    if (!echo) {
+        return {
+            unsubscribe: () => undefined,
+            publishTyping: () => undefined,
+        };
+    }
+
+    const client = echo;
     const channelName = `conversation.${conversationId}`;
-    const channel = echo.private(channelName);
+    const channel = client.private(channelName);
 
     channel.listen('.message.sent', (payload: ChatMessage) => {
         if (
@@ -253,7 +266,7 @@ function subscribeConversationEcho(
 
     return {
         unsubscribe: () => {
-            echo.leave(channelName);
+            client.leave(channelName);
         },
         publishTyping: (typing, user) => {
             channel.whisper('typing', { typing, user });
