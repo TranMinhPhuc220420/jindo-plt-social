@@ -7,16 +7,30 @@ use App\Events\UnreadBadgesUpdated;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\Firebase\ConversationMemberSync;
 use App\Services\UnreadMessageService;
 use Throwable;
 
 class MessageBroadcaster
 {
+    public function __construct(private readonly ConversationMemberSync $memberSync) {}
+
     /**
-     * Critical path for the receiver — keep synchronous and fail-soft.
+     * Critical path for the receiver — sync members then publish (fail-soft).
      */
     public function publishSent(Message $message): void
     {
+        try {
+            $message->loadMissing('conversation.participants');
+            $conversation = $message->conversation;
+
+            if ($conversation !== null) {
+                $this->memberSync->sync($conversation);
+            }
+        } catch (Throwable $e) {
+            report($e);
+        }
+
         try {
             broadcast(new MessageSent($message))->toOthers();
         } catch (Throwable $e) {

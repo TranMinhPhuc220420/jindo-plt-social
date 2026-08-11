@@ -10,6 +10,7 @@ class ConversationMemberSync
 
     /**
      * Upsert RTDB member map so Security Rules can authorize conversation reads.
+     * Keys must be string UIDs to match Firebase Auth custom-token uid.
      */
     public function sync(Conversation $conversation): void
     {
@@ -21,7 +22,7 @@ class ConversationMemberSync
 
         foreach ($conversation->participants as $participant) {
             $this->publisher->set(
-                'realtime/conversations/'.$conversation->id.'/members/'.$participant->id,
+                'realtime/conversations/'.$conversation->id.'/members/'.(string) $participant->id,
                 true,
             );
         }

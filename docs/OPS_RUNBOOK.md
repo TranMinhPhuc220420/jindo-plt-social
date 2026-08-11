@@ -174,8 +174,9 @@ Permissions: `storage/` and `bootstrap/cache/` must be writable by the web user.
    ```
 
 4. CI / Vite build must include `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_DATABASE_URL`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` so `public/build` can sign in and listen.
-5. Smoke: two browsers — send DM (sender optimistic; peer gets Firebase event), typing indicator, like a post (bell +1), open thread (badge decreases).
-6. If Firebase is unavailable, HTTP still succeeds (fail-soft); UI may need refresh.
+5. **Members map:** Security Rules require `realtime/conversations/{id}/members/{userId}: true` for both participants. Opening a DM or sending a message syncs this automatically. If peer chat does not update live, check the RTDB console for that path (and browser console for `permission_denied`).
+6. Smoke: two browsers — send DM (sender optimistic; peer gets Firebase event), typing indicator, like a post (bell +1), open thread (badge decreases).
+7. If Firebase is unavailable, HTTP still succeeds (fail-soft); UI may need refresh.
 
 Capability list (add/remove realtime features here): [architecture/realtime-inventory.md](./architecture/realtime-inventory.md). ADR: [decisions/0014-firebase-realtime-event-bus.md](./decisions/0014-firebase-realtime-event-bus.md).
 

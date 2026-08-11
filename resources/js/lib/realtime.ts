@@ -129,19 +129,25 @@ function listenForNewValue(
 ): Unsubscribe {
     let skipInitial = true;
 
-    return onValue(pathRef, (snapshot) => {
-        if (skipInitial) {
-            skipInitial = false;
+    return onValue(
+        pathRef,
+        (snapshot) => {
+            if (skipInitial) {
+                skipInitial = false;
 
-            return;
-        }
+                return;
+            }
 
-        const value = snapshot.val();
+            const value = snapshot.val();
 
-        if (value !== null && value !== undefined) {
-            onNew(value);
-        }
-    });
+            if (value !== null && value !== undefined) {
+                onNew(value);
+            }
+        },
+        (error) => {
+            console.warn('[realtime] RTDB listen failed', pathRef.toString(), error);
+        },
+    );
 }
 
 function subscribeUserFirebase(
@@ -156,18 +162,31 @@ function subscribeUserFirebase(
         const db = getFirebaseDatabase();
 
         if (cancelled || !signedIn || !db) {
+            if (!cancelled && !signedIn) {
+                console.warn(
+                    '[realtime] user subscribe skipped — Firebase auth unavailable',
+                    userId,
+                );
+            }
+
             return;
         }
 
         const badgesRef = ref(db, `realtime/users/${userId}/badges`);
         unsubs.push(
-            onValue(badgesRef, (snapshot) => {
-                const value = snapshot.val() as UnreadBadgesPayload | null;
+            onValue(
+                badgesRef,
+                (snapshot) => {
+                    const value = snapshot.val() as UnreadBadgesPayload | null;
 
-                if (value) {
-                    handlers.onUnreadBadges(value);
-                }
-            }),
+                    if (value) {
+                        handlers.onUnreadBadges(value);
+                    }
+                },
+                (error) => {
+                    console.warn('[realtime] badges listen failed', error);
+                },
+            ),
         );
 
         const notificationRef = ref(
@@ -292,6 +311,13 @@ function subscribeConversationFirebase(
         const db = getFirebaseDatabase();
 
         if (cancelled || !signedIn || !db) {
+            if (!cancelled && !signedIn) {
+                console.warn(
+                    '[realtime] conversation subscribe skipped — Firebase auth unavailable',
+                    conversationId,
+                );
+            }
+
             return;
         }
 

@@ -8,6 +8,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
 use App\Services\ConversationService;
+use App\Services\Firebase\ConversationMemberSync;
 use App\Services\UnreadMessageService;
 use App\Support\PostPresenter;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +25,7 @@ class ConversationController extends Controller
     public function __construct(
         private readonly ConversationService $conversations,
         private readonly UnreadMessageService $unreadMessages,
+        private readonly ConversationMemberSync $memberSync,
     ) {}
 
     public function index(Request $request): Response|RedirectResponse
@@ -68,6 +70,9 @@ class ConversationController extends Controller
 
         $viewer = $request->user();
         $conversation->load('participants');
+
+        // Heal RTDB members map for conversations created before Firebase.
+        $this->memberSync->sync($conversation);
 
         $this->markInboundMessagesRead($viewer, $conversation);
 

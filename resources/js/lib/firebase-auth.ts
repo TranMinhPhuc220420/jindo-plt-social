@@ -49,19 +49,28 @@ export async function ensureFirebaseSignedIn(): Promise<boolean> {
             });
 
             if (!response.ok) {
+                console.warn(
+                    '[firebase-auth] /firebase/token failed',
+                    response.status,
+                );
+
                 return false;
             }
 
             const body = (await response.json()) as { token?: string };
 
             if (!body.token) {
+                console.warn('[firebase-auth] token missing in response');
+
                 return false;
             }
 
             await signInWithCustomToken(auth, body.token);
 
             return Boolean(auth.currentUser);
-        } catch {
+        } catch (error) {
+            console.warn('[firebase-auth] sign-in failed', error);
+
             return false;
         } finally {
             signInPromise = null;
