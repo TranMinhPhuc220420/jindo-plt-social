@@ -14,12 +14,23 @@ class PostPolicy
 
     public function view(?User $user, Post $post): bool
     {
-        return $user !== null;
+        if ($user === null) {
+            return false;
+        }
+
+        return $post->isApproved()
+            || $user->id === $post->user_id
+            || $user->isAdmin();
     }
 
     public function create(User $user): bool
     {
         return ! $user->isSuspended();
+    }
+
+    public function engage(User $user, Post $post): bool
+    {
+        return ! $user->isSuspended() && $post->isApproved();
     }
 
     public function update(User $user, Post $post): bool

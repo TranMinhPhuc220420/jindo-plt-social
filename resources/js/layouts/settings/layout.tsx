@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
+import { LegalLinks } from '@/components/legal/legal-links';
 import { Button } from '@/components/ui/button';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
@@ -67,6 +68,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
 
                 <div className="min-w-0 flex-1">
                     <section className="max-w-xl space-y-8">{children}</section>
+                    <LegalLinks className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground" />
                 </div>
             </div>
         </div>

@@ -1,4 +1,4 @@
-import { Form, usePage } from '@inertiajs/react';
+import { Form, Link, usePage } from '@inertiajs/react';
 import { ImagePlus } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { EmojiPickerButton } from '@/components/emoji/emoji-picker-button';
@@ -223,7 +223,7 @@ export function PostComposerShell({
                                         rows={5}
                                         maxLength={MAX_BODY}
                                         autoFocus
-                                        placeholder={`What's on your mind, ${user.name.split(' ')[0]}?`}
+                                        placeholder={`Share a note, question, or what you learned, ${user.name.split(' ')[0]}…`}
                                         value={body}
                                         onChange={(event) =>
                                             setBody(event.target.value)
@@ -236,7 +236,21 @@ export function PostComposerShell({
                                     <InputError message={errors.body} />
                                     <p className="text-xs text-muted-foreground">
                                         Markdown: **bold**, lists, links. No
-                                        images or HTML.
+                                        images or HTML. Posting accepts the{' '}
+                                        <Link
+                                            href="/guidelines"
+                                            className="underline hover:text-foreground"
+                                        >
+                                            community rules
+                                        </Link>{' '}
+                                        and must not share{' '}
+                                        <Link
+                                            href="/copyright"
+                                            className="underline hover:text-foreground"
+                                        >
+                                            copyrighted materials
+                                        </Link>
+                                        .
                                     </p>
 
                                     {allowMedia ? (

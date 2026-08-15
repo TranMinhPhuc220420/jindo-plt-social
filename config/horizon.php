@@ -1,7 +1,5 @@
 <?php
 
-use Illuminate\Support\Str;
-
 return [
 
     /*
@@ -67,10 +65,7 @@ return [
     |
     */
 
-    'prefix' => env(
-        'HORIZON_PREFIX',
-        Str::slug((string) env('APP_NAME', 'laravel'), '_').'_horizon:'
-    ),
+    'prefix' => env('HORIZON_PREFIX', 'plt_social_horizon:'),
 
     /*
     |--------------------------------------------------------------------------

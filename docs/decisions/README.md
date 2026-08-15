@@ -50,4 +50,11 @@ Brief list of rejected options.
 | [0011](./0011-safe-post-markdown.md) | Safe post markdown (social subset + sanitize) | Accepted |
 | [0012](./0012-mobile-liquid-glass-chrome.md) | Mobile chrome (glass abandoned → solid) | Superseded |
 | [0013](./0013-post-share.md) | Facebook-like post share (feed + copy + DM) | Accepted |
-| [0014](./0014-firebase-realtime-event-bus.md) | Firebase RTDB event bus (MySQL SoT) on cPanel | Accepted |
+| [0014](./0014-firebase-realtime-event-bus.md) | Firebase RTDB event bus (MySQL SoT for non-DM) on cPanel | Accepted (amended 0019, 0020) |
+| [0015](./0015-admin-provisioned-accounts.md) | Admin-provisioned accounts (invite-only) | Accepted |
+| [0015](./0015-admin-provisioned-accounts.md) | Admin-provisioned accounts (invite-only) | Accepted |
+| [0016](./0016-post-moderation-queue.md) | Posts go live only after admin approval | Accepted |
+| [0017](./0017-plt-hoc-ba-learning-community.md) | PLT Học Bá is a closed learning community | Accepted |
+| [0018](./0018-minimal-profile-child-data.md) | Minimal profile data and child-account provisioning | Accepted |
+| [0019](./0019-firebase-live-dm-cache.md) | Firebase RTDB live DM cache (client-owned writes) | Accepted (SoT superseded by 0020) |
+| [0020](./0020-firebase-durable-dms.md) | Firebase-only durable 1:1 DMs (no MySQL messages) | Accepted |

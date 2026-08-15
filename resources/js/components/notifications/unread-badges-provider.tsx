@@ -10,12 +10,22 @@ import {
     useState,
 } from 'react';
 import type { ReactNode } from 'react';
-import { isRealtimeEnabled, subscribeUserRealtime } from '@/lib/realtime';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import {
+    inboxUnreadSum,
+    isRealtimeEnabled,
+    subscribeUserInbox,
+    subscribeUserRealtime,
+} from '@/lib/realtime';
+import type { UnreadBadgesPayload } from '@/lib/realtime';
 import type { AppNotification, Auth } from '@/types';
 
 type PageProps = {
     auth: Auth;
     recent_notifications?: AppNotification[];
+    realtime?: {
+        driver?: string | null;
+    };
 };
 
 type UnreadBadgesValue = {
@@ -26,8 +36,8 @@ type UnreadBadgesValue = {
     markOneOptimistic: (id: string) => void;
     /** Authoritative message unread count (e.g. after opening a thread). */
     setMessages: (count: number) => void;
-    /** Conversation the user is actively viewing — live bumps for it are ignored. */
-    setActiveConversation: (conversationId: number | null) => void;
+    /** Conversation the user is actively viewing. */
+    setActiveConversation: (conversationId: string | null) => void;
 };
 
 type Snapshot = {
@@ -47,15 +57,56 @@ function recentSignature(items: AppNotification[]): string {
     return items.map((item) => `${item.id}:${item.read_at ?? ''}`).join('|');
 }
 
+function semanticNotificationType(payload: Record<string, unknown>): string {
+    const nested =
+        payload.data && typeof payload.data === 'object'
+            ? (payload.data as Record<string, unknown>)
+            : null;
+    const candidates = [payload.type, nested?.type];
+
+    for (const value of candidates) {
+        if (
+            typeof value === 'string' &&
+            value !== '' &&
+            !value.includes('\\')
+        ) {
+            return value;
+        }
+    }
+
+    const classType = typeof payload.type === 'string' ? payload.type : '';
+    const fromClass: Record<string, string> = {
+        'App\\Notifications\\PostLikedNotification': 'post_liked',
+        'App\\Notifications\\CommentCreatedNotification': 'comment_created',
+        'App\\Notifications\\UserFollowedNotification': 'user_followed',
+        'App\\Notifications\\UserMentionedNotification': 'user_mentioned',
+        'App\\Notifications\\PostSharedNotification': 'post_shared',
+        'App\\Notifications\\PostModeratedNotification': 'post_moderated',
+    };
+
+    return fromClass[classType] ?? 'notification';
+}
+
 function notificationFromEcho(
     payload: Record<string, unknown>,
 ): AppNotification {
+    const nested =
+        payload.data &&
+        typeof payload.data === 'object' &&
+        !Array.isArray(payload.data)
+            ? (payload.data as Record<string, unknown>)
+            : payload;
+    const kind = semanticNotificationType(payload);
+
     return {
-        id: String(payload.id ?? crypto.randomUUID()),
-        type: String(payload.type ?? 'notification'),
-        data: payload as AppNotification['data'],
+        id: String(payload.id ?? nested.id ?? crypto.randomUUID()),
+        type: kind,
+        data: { ...nested, type: kind } as AppNotification['data'],
         read_at: null,
-        created_at: new Date().toISOString(),
+        created_at:
+            typeof payload.created_at === 'string'
+                ? payload.created_at
+                : new Date().toISOString(),
     };
 }
 
@@ -77,25 +128,24 @@ function mergeRecentPreferringRead(
 }
 
 /**
- * full — trust server (fresh network visit).
- * decrease-only — never inflate from stale history/prefetch; only lower a
- * counter when that specific shared prop decreased (keeps Echo bumps intact).
+ * full — first mount only (seed from Inertia).
+ * decrease-only — never inflate from stale history/prefetch; keep live bumps.
  */
 function buildSnapshot(
     mode: SyncMode,
     current: Snapshot,
     serverNotifications: number,
-    serverMessages: number,
+    _serverMessages: number,
     recent: AppNotification[],
     recentSig: string,
 ): Snapshot {
     if (mode === 'full') {
         return {
             notifications: serverNotifications,
-            messages: serverMessages,
+            messages: current.messages,
             recent,
             serverNotifications,
-            serverMessages,
+            serverMessages: 0,
             recentSig,
         };
     }
@@ -105,31 +155,31 @@ function buildSnapshot(
             ? Math.min(current.notifications, serverNotifications)
             : current.notifications;
 
-    const nextMessages =
-        serverMessages < current.serverMessages
-            ? Math.min(current.messages, serverMessages)
-            : current.messages;
-
     return {
         notifications: nextNotifications,
-        messages: nextMessages,
+        messages: current.messages,
         recent: mergeRecentPreferringRead(current.recent, recent),
         serverNotifications,
-        serverMessages,
+        serverMessages: 0,
         recentSig,
     };
 }
 
 export function UnreadBadgesProvider({ children }: { children: ReactNode }) {
-    const { auth, recent_notifications = [] } = usePage<PageProps>().props;
+    const {
+        auth,
+        recent_notifications = [],
+        realtime,
+    } = usePage<PageProps>().props;
     const userId = auth.user?.id;
+    const realtimeDriver = realtime?.driver ?? null;
 
     const serverNotifications = auth.unread_notifications_count ?? 0;
     const serverMessages = auth.unread_messages_count ?? 0;
     const recentSig = recentSignature(recent_notifications);
 
     const sawNetworkSuccess = useRef(false);
-    const activeConversationId = useRef<number | null>(null);
+    const activeConversationId = useRef<string | null>(null);
     const [pendingMode, setPendingMode] = useState<SyncMode | null>('full');
 
     const [snap, setSnap] = useState<Snapshot>(() => ({
@@ -143,9 +193,9 @@ export function UnreadBadgesProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         const offSuccess = router.on('success', () => {
-            // Prefetch also fires success — navigate may downgrade to decrease-only.
+            // Prefetch also fires success — never full-replace live Firebase/Echo bumps.
             sawNetworkSuccess.current = true;
-            setPendingMode('full');
+            setPendingMode('decrease-only');
         });
 
         const offNavigate = router.on('navigate', (event) => {
@@ -212,64 +262,59 @@ export function UnreadBadgesProvider({ children }: { children: ReactNode }) {
 
     const onNotification = useEffectEvent(
         (payload: Record<string, unknown>) => {
-            setSnap((current) => ({
-                ...current,
-                notifications: current.notifications + 1,
-                recent: [
-                    notificationFromEcho(payload),
-                    ...current.recent,
-                ].slice(0, 8),
-            }));
-        },
-    );
-
-    const onUnreadBadges = useEffectEvent(
-        (payload: {
-            unread_messages_count?: number;
-            unread_notifications_count?: number;
-            conversation_id?: number;
-        }) => {
             setSnap((current) => {
-                let nextMessages = current.messages;
+                const incoming = notificationFromEcho(payload);
 
-                if (typeof payload.unread_messages_count === 'number') {
-                    const focused =
-                        activeConversationId.current !== null &&
-                        payload.conversation_id ===
-                            activeConversationId.current;
-
-                    // Viewing this thread — ignore live increases (mark-read
-                    // will follow). Still apply decreases / other conversations.
-                    if (
-                        focused &&
-                        payload.unread_messages_count > current.messages
-                    ) {
-                        nextMessages = current.messages;
-                    } else {
-                        nextMessages = payload.unread_messages_count;
-                    }
+                if (current.recent.some((item) => item.id === incoming.id)) {
+                    return current;
                 }
 
                 return {
                     ...current,
-                    messages: nextMessages,
-                    notifications:
-                        typeof payload.unread_notifications_count === 'number'
-                            ? payload.unread_notifications_count
-                            : current.notifications,
+                    recent: [incoming, ...current.recent].slice(0, 8),
                 };
             });
         },
     );
 
+    const onUnreadBadges = useEffectEvent((payload: UnreadBadgesPayload) => {
+        setSnap((current) => ({
+            ...current,
+            notifications:
+                typeof payload.unread_notifications_count === 'number'
+                    ? payload.unread_notifications_count
+                    : current.notifications,
+        }));
+    });
+
     useEffect(() => {
-        if (!userId || !isRealtimeEnabled()) {
+        if (!userId || !isRealtimeEnabled(realtimeDriver)) {
             return;
         }
 
-        return subscribeUserRealtime(userId, {
-            onNotification,
-            onUnreadBadges,
+        return subscribeUserRealtime(
+            userId,
+            {
+                onNotification,
+                onUnreadBadges,
+            },
+            realtimeDriver,
+        );
+    }, [userId, realtimeDriver]);
+
+    useEffect(() => {
+        if (!userId || !isFirebaseConfigured()) {
+            return;
+        }
+
+        return subscribeUserInbox(userId, (items) => {
+            const sum = inboxUnreadSum(items);
+
+            setSnap((current) =>
+                current.messages === sum
+                    ? current
+                    : { ...current, messages: sum },
+            );
         });
     }, [userId]);
 
@@ -311,7 +356,7 @@ export function UnreadBadgesProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const setActiveConversation = useCallback(
-        (conversationId: number | null) => {
+        (conversationId: string | null) => {
             activeConversationId.current = conversationId;
         },
         [],

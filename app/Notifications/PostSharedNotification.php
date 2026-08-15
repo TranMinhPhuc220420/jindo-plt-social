@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Post;
 use App\Models\User;
+use App\Notifications\Concerns\KeepsSemanticBroadcastType;
 use App\Support\NotificationPresenter;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -12,7 +13,7 @@ use Illuminate\Notifications\Notification;
 
 class PostSharedNotification extends Notification implements ShouldBroadcastNow
 {
-    use Queueable;
+    use KeepsSemanticBroadcastType, Queueable;
 
     public function __construct(
         public User $actor,

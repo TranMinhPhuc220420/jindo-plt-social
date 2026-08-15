@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Support\Str;
 use Pdo\Mysql;
 
 return [
@@ -149,7 +148,10 @@ return [
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-database-'),
+            // Pin REDIS_PREFIX. Do not derive from APP_NAME — a rename
+            // changes queue key names while long-running Horizon workers
+            // keep the old prefix, so media jobs sit unprocessed.
+            'prefix' => env('REDIS_PREFIX', 'plt-social-database-'),
             'persistent' => env('REDIS_PERSISTENT', false),
         ],
 

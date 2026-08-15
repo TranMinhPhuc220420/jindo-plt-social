@@ -12,6 +12,7 @@ import {
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
+import { useUnreadBadges } from '@/components/notifications/unread-badges-provider';
 import {
     Sidebar,
     SidebarContent,
@@ -26,7 +27,7 @@ import type { NavItem } from '@/types';
 export function AppSidebar() {
     const { auth } = usePage().props;
     const username = auth.user?.username;
-    const unreadMessages = auth.unread_messages_count ?? 0;
+    const { messages: unreadMessages } = useUnreadBadges();
 
     const mainNavItems: NavItem[] = [
         {

@@ -23,6 +23,9 @@ trait ProfileValidationRules
     }
 
     /**
+     * Learning-community profile: identity + optional education. Social About
+     * fields stay on the user row but are no longer collected here.
+     *
      * @return array<string, array<int, ValidationRule|array<mixed>|string>>
      */
     protected function socialProfileRules(?int $userId = null): array
@@ -34,23 +37,9 @@ trait ProfileValidationRules
             'bio' => ['nullable', 'string', 'max:160'],
             'avatar' => ['nullable', 'image', 'max:2048'],
             'cover' => ['nullable', 'image', 'max:4096'],
-            'workplace' => ['nullable', 'string', 'max:120'],
             'education' => ['nullable', 'string', 'max:120'],
-            'location' => ['nullable', 'string', 'max:120'],
-            'hometown' => ['nullable', 'string', 'max:120'],
-            'website' => ['nullable', 'url', 'max:255'],
-            'birthday' => ['nullable', 'date', 'before:today'],
-            'gender' => ['nullable', 'string', 'max:60'],
-            'relationship_status' => ['nullable', 'string', 'max:60'],
             'profile_privacy' => ['nullable', 'array'],
-            'profile_privacy.workplace' => $visibility,
             'profile_privacy.education' => $visibility,
-            'profile_privacy.location' => $visibility,
-            'profile_privacy.hometown' => $visibility,
-            'profile_privacy.website' => $visibility,
-            'profile_privacy.birthday' => $visibility,
-            'profile_privacy.gender' => $visibility,
-            'profile_privacy.relationship_status' => $visibility,
         ];
     }
 

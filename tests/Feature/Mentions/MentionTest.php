@@ -7,7 +7,7 @@ use App\Notifications\UserMentionedNotification;
 use App\Services\MentionService;
 use Illuminate\Support\Facades\Notification;
 
-test('creating a post with an at-mention notifies the user', function () {
+test('creating a post with an at-mention stores the mention without notifying until approval', function () {
     Notification::fake();
 
     $author = User::factory()->create(['username' => 'author1']);
@@ -25,7 +25,7 @@ test('creating a post with an at-mention notifies the user', function () {
         'mentionable_type' => Post::class,
     ]);
 
-    Notification::assertSentTo($mentioned, UserMentionedNotification::class);
+    Notification::assertNotSentTo($mentioned, UserMentionedNotification::class);
 });
 
 test('self mentions do not notify', function () {
@@ -94,7 +94,7 @@ test('updating a post re-syncs mentions', function () {
             ->exists()
     )->toBeTrue();
 
-    Notification::assertSentTo($second, UserMentionedNotification::class);
+    Notification::assertNotSentTo($second, UserMentionedNotification::class);
 });
 
 test('comment mentions notify the mentioned user', function () {

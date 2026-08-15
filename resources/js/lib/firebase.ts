@@ -7,9 +7,12 @@ import type { Database } from 'firebase/database';
 
 const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID as
     string | undefined;
+const apiKey = import.meta.env.VITE_FIREBASE_API_KEY as string | undefined;
+const databaseURL = import.meta.env.VITE_FIREBASE_DATABASE_URL as
+    string | undefined;
 
 export function isFirebaseConfigured(): boolean {
-    return Boolean(projectId && import.meta.env.VITE_FIREBASE_API_KEY);
+    return Boolean(projectId && apiKey && databaseURL);
 }
 
 export function getFirebaseApp(): FirebaseApp | null {

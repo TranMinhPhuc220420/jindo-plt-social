@@ -8,10 +8,12 @@ use App\Jobs\ProcessPostMediaJob;
 use App\Models\Comment;
 use App\Models\Post;
 use App\Models\PostMedia;
+use App\Models\Report;
 use App\Models\User;
 use App\Services\FeedService;
 use App\Services\HashtagService;
 use App\Services\MentionService;
+use App\Services\PostModerationService;
 use App\Support\MediaDisk;
 use App\Support\PostPresenter;
 use Illuminate\Http\RedirectResponse;
@@ -26,10 +28,13 @@ class PostController extends Controller
         private readonly FeedService $feedService,
         private readonly MentionService $mentions,
         private readonly HashtagService $hashtags,
+        private readonly PostModerationService $moderation,
     ) {}
 
     public function show(Request $request, Post $post): Response
     {
+        $this->authorize('view', $post);
+
         $viewer = $request->user();
 
         $post = $this->feedService->engagementQuery($viewer)
@@ -52,31 +57,44 @@ class PostController extends Controller
 
     public function store(StorePostRequest $request): RedirectResponse
     {
-        $post = $request->user()->posts()->create([
+        $user = $request->user();
+        $post = $user->posts()->create([
             'body' => $request->validated('body'),
+            ...$this->moderation->attributesForWriter($user),
         ]);
 
         $this->attachUploadedImages($post, $request->file('images', []));
-        $this->mentions->syncFor($post, $request->user(), $post->body);
+        $this->mentions->syncFor($post, $user, $post->body);
         $this->hashtags->syncFor($post, $post->body);
-        $this->feedService->forgetAuthorCache($request->user()->id);
+        $this->feedService->forgetAuthorCache($user->id);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Post created.')]);
+        $message = $post->isApproved()
+            ? __('Post created.')
+            : __('Submitted for review.');
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
 
         return to_route('feed');
     }
 
     public function update(UpdatePostRequest $request, Post $post): RedirectResponse
     {
-        $post->update([
-            'body' => $request->validated('body'),
-        ]);
+        $this->moderation->applyWriterStatus($post, $request->user());
 
-        $this->mentions->syncFor($post, $request->user(), $post->body);
-        $this->hashtags->syncFor($post, $post->body);
+        $validated = $request->validated();
+        $body = is_string($validated['body'] ?? null) ? $validated['body'] : '';
+        $post->body = $body;
+        $post->save();
+
+        $this->mentions->syncFor($post, $request->user(), $body);
+        $this->hashtags->syncFor($post, $body);
+
+        $updatedMessage = $post->isApproved()
+            ? __('Post updated.')
+            : __('Submitted for review.');
 
         if ($post->shared_post_id !== null) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => __('Post updated.')]);
+            Inertia::flash('toast', ['type' => 'success', 'message' => $updatedMessage]);
 
             return back();
         }
@@ -96,7 +114,7 @@ class PostController extends Controller
         $uploads = array_slice($request->file('images', []), 0, max(0, 6 - $existingCount));
         $this->attachUploadedImages($post, $uploads, $existingCount);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Post updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $updatedMessage]);
 
         return back();
     }
@@ -158,6 +176,7 @@ class PostController extends Controller
                 'avatar' => $comment->user->avatarUrl(),
             ],
             'can_delete' => $viewer->can('delete', $comment),
+            'can_report' => $viewer->can('create', [Report::class, $comment]),
             'replies' => $comment->relationLoaded('replies')
                 ? $comment->replies->map(fn (Comment $reply) => $this->commentPayload($reply, $viewer))->values()->all()
                 : [],

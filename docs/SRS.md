@@ -1,6 +1,6 @@
 # SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
 
-**Project Name:** PLT Social  
+**Project Name:** PLT Học Bá  
 **Platform:** Web Application (Responsive)  
 **Document Role:** Master blueprint for phased implementation on the existing Laravel React starter kit.
 
@@ -34,22 +34,22 @@ This project is **not** a greenfield app. Implementation must extend the existin
 
 ### 1.1. Purpose
 
-Define architecture, functional requirements, data model, UI surfaces, and non-functional constraints for **PLT Social** — a scalable social networking product built on the current codebase. This document guides AI-assisted and human development so generated code matches project conventions.
+Define architecture, functional requirements, data model, UI surfaces, and non-functional constraints for **PLT Học Bá** — a closed learning community for PLT Solutions members, built on the current codebase. This document guides AI-assisted and human development so generated code matches project conventions.
 
 ### 1.2. Product Goals
 
-- Authenticated users can publish content, follow others, and consume a personalized newsfeed.
-- Engagement (likes, comments, notifications) increases retention.
-- Later phases add rich media, search/explore, and 1:1 messaging with real-time delivery.
+- Provisioned members can share knowledge, follow classmates, and consume a personalized feed.
+- Engagement (likes, comments, notifications) supports learning discussion.
+- The product is **not** a public social network: accounts are admin-provisioned (Phase 30); posts are reviewed before they go live (Phase 32).
 - Delivery is phased to keep each increment testable and mergeable.
 
 ### 1.3. Target Audience & Roles
 
 | Role | Description |
 |------|-------------|
-| **Guest** | Unauthenticated. May access welcome, login, register, password reset. Cannot view feeds or profiles that require auth (Phase 1 default: social surfaces are auth-gated). |
+| **Guest** | Unauthenticated. May access welcome, login, password reset, and the closed register page. Cannot self-register (Phase 30; `FORTIFY_PUBLIC_REGISTRATION=false`). Cannot view feeds or profiles that require auth (Phase 1 default: social surfaces are auth-gated). |
 | **User** | Authenticated, email-verified member. Creates posts, follows, engages, manages public profile and account settings. |
-| **Administrator** | Elevated privileges to moderate content, manage users, and view basic system analytics. Implemented via a simple `role` (or equivalent) flag in Phase 1; expand later if needed. |
+| **Administrator** | Elevated privileges to moderate content, manage users (including **create user**), and view basic system analytics. Implemented via a simple `role` (or equivalent) flag in Phase 1; expand later if needed. |
 
 ### 1.4. Out of Scope (All Phases Unless Explicitly Added Later)
 
@@ -146,6 +146,8 @@ Development is strictly phased. **Do not implement later-phase features until th
 | **27** | Mobile overlays + walk | Solid sheet composer; page fit (no glass) |
 | **28** | Share post | Feed share + copy link + DM embed |
 | **29** | Messages mobile UX | Inbox-first dock, immersive thread, keyboard/emoji |
+| **30** | Admin-provisioned accounts | Lock public register; admins create users with a temporary password |
+| **31** | Admin console layout | Separate admin sidebar shell; dashboard cards; searchable tables |
 
 ---
 
@@ -159,15 +161,16 @@ Establish identity fields needed for social UX, public profile surfaces, posting
 
 #### 4.2.1. Authentication & Authorization (extend existing)
 
-Already present (keep): login, logout, register, password reset, email verification, passkeys, 2FA, account settings (profile name/email, security, appearance).
+Already present (keep): login, logout, Fortify register routes, password reset, email verification, passkeys, 2FA, account settings (profile name/email, security, appearance).
 
 **Add / change:**
 
-- Registration and user model must include a **unique `username`** (slug-safe: lowercase alphanumeric + underscores; length limits documented in validation rules).
+- User model must include a **unique `username`** (slug-safe: lowercase alphanumeric + underscores; length limits documented in validation rules). Username is set when an admin creates the account (Phase 30) or on profile update.
+- **Public self-registration is off by default** (`FORTIFY_PUBLIC_REGISTRATION=false`, ADR 0015). GET `/register` shows a closed page; POST `/register` is 403. Admins create members at `/admin/users` with a temporary password; new accounts are `role=user` and email-verified.
 - Display name remains `name`.
-- Guest access unchanged for auth pages; social app routes require `auth` + `verified` middleware (same pattern as current `dashboard`).
+- Guest access unchanged for login/reset; social app routes require `auth` + `verified` middleware (same pattern as current `dashboard`).
 - Basic RBAC: `role` enum/string on `users` with values `user` | `admin` (default `user`).
-- Admin capabilities in Phase 1 (minimum): list users, suspend/ban or soft-disable user, delete any post. Full analytics UI may be stubbed.
+- Admin capabilities in Phase 1 (minimum): list users, suspend/ban or soft-disable user, delete any post. Full analytics UI may be stubbed. Phase 30: create user.
 
 #### 4.2.2. User Profile Management
 
@@ -249,7 +252,7 @@ Suggested structure (names may vary; intent matters):
 - Policies: `PostPolicy`, `UserPolicy`
 - Service: `FeedService` for newsfeed query + eager loads
 - Factories/Seeders: users with usernames, sample posts/follows for local demos
-- Tests (Pest): auth registration with username; follow constraints; feed membership; post authorization
+- Tests (Pest): public register forbidden; admin create user with username; follow constraints; feed membership; post authorization
 
 ### 4.5. Frontend Surface (Phase 1)
 
@@ -266,7 +269,7 @@ Reuse AppShell/sidebar; remove starter-kit footer links that point to Laravel do
 
 ### 4.6. Phase 1 Acceptance Checklist
 
-- [ ] Unique username on register and profile update
+- [ ] Unique username on admin-created accounts and profile update
 - [ ] Public profile with avatar/cover/bio/counts
 - [ ] Create/edit/delete own posts; image optional
 - [ ] Follow/unfollow with constraints
@@ -443,6 +446,7 @@ Rich media posts, direct messaging, discovery, and performance hardening for hig
 ### 7.4. UI / UX
 
 - **Chrome (Phases 8–15):** Facebook-like social shell — sticky top bar + left rail + center column (~680px) + optional right rail on desktop; compact top + content on mobile. Do not keep inset admin sidebar as the primary social chrome (ADR 0006).
+- **Admin console (Phase 31):** `/admin/*` uses a dedicated inset sidebar layout (full-width tables, breadcrumbs). Social chrome stays on feed/profile/messages.
 - **Tokens:** Social blue primary accent, denser spacing, card/divider surfaces; keep shadcn/Radix primitives; respect light/dark appearance.
 - **Empty states:** Title + short copy + primary CTA (e.g. Explore, Follow) — not text-only muted lines.
 - **Loading:** Skeletons for feed/post lists on visit/partial reload.
@@ -853,7 +857,7 @@ Feed pagination UX (Phase 10), profile header (Phase 11).
 
 | ID | Surface | Requirements |
 |----|---------|----------------|
-| 15.A | Welcome | Brand + Login/Register; remove Laravel Docs/Laracasts/Deploy |
+| 15.A | Welcome | Brand + Login (Sign up only if public registration on); remove Laravel Docs/Laracasts/Deploy |
 | 15.B | Auth pages | Branded chrome, social accent |
 | 15.C | Settings | Denser forms; avatar/cover preview |
 | 15.D | Admin | Consistent tokens; confirm before suspend/delete |
@@ -1328,10 +1332,274 @@ Liquid glass, group chat, message reactions, infinite history, desktop auto-open
 
 ---
 
-## 37. DOCUMENT HISTORY
+## 37. PHASE 30 — ADMIN-PROVISIONED ACCOUNTS
+
+**Goal:** Temporarily lock public self-registration. Only administrators can create member accounts (temporary password, no invite email).
+
+**Related:** ADR 0015 · `docs/design/014-ux-guest-settings-admin.md` (amended)
+
+### 37.1. Inventory
+
+| ID | Surface | Requirements |
+|----|---------|----------------|
+| 30.A | Docs | ADR 0015 + SRS + design 014 + PROGRESS |
+| 30.B | Public register | Flag default off; closed GET `/register`; POST 403; hide Sign up CTAs |
+| 30.C | Admin create | `/admin/users` dialog: name, username, email, password; role `user`; email verified; audit `user.created` |
+| 30.D | Quality gate | Pest + Pint/PHPStan/lint/types |
+
+### 37.2. Phase 30 Acceptance Checklist
+
+- [x] Guest cannot self-register (POST 403; no user row)
+- [x] Welcome/Login hide Sign up while `canRegister` is false
+- [x] Admin can create a verified `user` who can log in; admin session unchanged
+- [x] Non-admin cannot create users
+- [x] Unique username validated on admin create
+- [x] Pest + quality gates green
+
+---
+
+## 38. PHASE 31 — ADMIN CONSOLE LAYOUT
+
+**Goal:** Separate `/admin/*` from the social feed chrome. Full-width console with sidebar, clickable dashboard cards, and manageable tables (search + pagination).
+
+**Related:** ADR 0006 (amended) · `docs/design/028-admin-console-layout.md`
+
+### 38.1. Inventory
+
+| ID | Surface | Requirements |
+|----|---------|----------------|
+| 31.A | Docs | ADR 0006 amend + design 028 + PROGRESS |
+| 31.B | Shell | `AdminLayout` for `admin/*`; sidebar nav; breadcrumbs; no social dock/bell |
+| 31.C | Dashboard + tables | Clickable cards; users/posts `?q=`; badges; pagination |
+| 31.D | Quality gate | Pest + Pint/PHPStan/lint/types |
+
+### 38.2. Phase 31 Acceptance Checklist
+
+- [x] Admin pages do not use the 680px social column
+- [x] Sidebar lists Dashboard, Users, Posts, Failed jobs, Back to app
+- [x] Dashboard cards link to Users / Posts / Failed jobs
+- [x] Users and posts filter by `q`; pagination preserves query
+- [x] Pest + quality gates green
+
+---
+
+## 39. PHASE 32 — POST MODERATION QUEUE
+
+**Goal:** Member posts (including share-to-feed) are **pending** until an administrator approves them. Rejected posts stay off the public feed and show the reject reason to the author. `/admin/posts` is a review queue with enough content to decide without opening the social feed.
+
+**Related:** ADR 0016 · `docs/design/029-post-moderation.md`
+
+### 39.1. Inventory
+
+| ID | Surface | Requirements |
+|----|---------|----------------|
+| 32.A | Docs | ADR 0016 + design 029 + PROGRESS |
+| 32.B | Schema | `moderation_status` pending/approved/rejected; reason; reviewer; backfill existing as approved |
+| 32.C | Visibility | Public lists = approved; author sees own pending/rejected; strangers 403 on direct URL |
+| 32.D | Write path | Member create/edit/share → pending; admin write → approved; mentions/share notify on approve |
+| 32.E | Admin queue | `/admin/posts?status=` default pending; rich row; Approve / Reject (reason) / Delete |
+| 32.F | Author UX | Badge + reject reason; hide like/comment/share/bookmark until approved |
+| 32.G | Quality gate | Pest + Pint/PHPStan/lint/types |
+
+### 39.2. Phase 32 Acceptance Checklist
+
+- [x] Member post is pending and does not appear on others’ feed, explore, search, or tags
+- [x] Author sees own pending/rejected on home feed and own profile
+- [x] Admin Approve publishes; Reject hides and shows reason to author
+- [x] Member edit of approved or rejected post returns it to pending (reason cleared)
+- [x] Admin create/edit is auto-approved
+- [x] `/admin/posts` default filter is pending; row includes avatar, full body, media thumbs, share embed, status
+- [x] Pest + quality gates green
+
+---
+
+## 40. PHASE 33 — PLT HỌC BÁ REBRAND
+
+**Goal:** Display name **PLT Học Bá**, learning-community copy on guest/auth/composer/OG. Do not call the product a public social network.
+
+**Related:** ADR 0017 · `docs/design/030-plt-hoc-ba-rebrand.md`
+
+### 40.1. Inventory
+
+| ID | Surface | Requirements |
+|----|---------|----------------|
+| 33.A | Docs | ADR 0017 + design 030 + PROGRESS |
+| 33.B | Config / meta | `APP_NAME`, tagline, subtitle, Blade OG, Inertia shared props |
+| 33.C | Copy | Welcome, closed register, composer placeholder, empty feed/explore |
+| 33.D | Quality gate | Pest + Pint/PHPStan/lint/types |
+
+### 40.2. Phase 33 Acceptance Checklist
+
+- [x] Welcome shows PLT Học Bá + tagline; no “social home” / open signup when registration is closed
+- [x] OG description is learning-community, not “follow friends”
+- [x] Composer placeholder is knowledge-sharing, not “What’s on your mind”
+- [x] Pest + quality gates green
+
+---
+
+## 41. PHASE 34 — COMMUNITY LEGAL PAGES
+
+**Goal:** Public Vietnamese pages for community rules, personal-data policy (Luật 91/2025/QH15 draft), and copyright. Footer + composer notice.
+
+**Related:** ADR 0017 · `docs/design/031-community-legal-pages.md`
+
+### 41.1. Inventory
+
+| ID | Surface | Requirements |
+|----|---------|----------------|
+| 34.A | Docs | design 031 + markdown in `resources/legal/` |
+| 34.B | Routes | Public `/guidelines`, `/privacy`, `/copyright` |
+| 34.C | Chrome | Footer on welcome/auth/settings; composer notice |
+| 34.D | Quality gate | Pest guest 200 + Pint/PHPStan/lint/types |
+
+### 41.2. Phase 34 Acceptance Checklist
+
+- [x] Guests can open all three pages
+- [x] Pages do not describe a public social network
+- [x] Composer links guidelines / copyright
+- [x] Pest + quality gates green
+
+---
+
+## 42. PHASE 35 — CONTENT REPORTS
+
+**Goal:** Members report approved posts and comments. Admins review `/admin/reports`.
+
+**Related:** `docs/design/032-content-reports.md`
+
+### 42.1. Inventory
+
+| ID | Surface | Requirements |
+|----|---------|----------------|
+| 35.A | Schema | `reports` morph + unique reporter/target + enums |
+| 35.B | Member | Report on post menu and comments; Form Request + policy |
+| 35.C | Admin | Queue, dismiss, reject post / delete comment, dashboard card |
+| 35.D | Quality gate | Pest + Pint/PHPStan/lint/types |
+
+### 42.2. Phase 35 Acceptance Checklist
+
+- [x] Member can report another member’s approved post/comment
+- [x] Cannot report own content; duplicate is rejected; guest cannot report
+- [x] Admin can dismiss or resolve
+- [x] Pest + quality gates green
+
+---
+
+## 43. PHASE 36 — MINIMAL PII + UNDER-18
+
+**Goal:** About shows education only. Admin provision requires birthday. Guardian consent for under 16.
+
+**Related:** ADR 0018 · `docs/design/033-minimal-profile-under18.md`
+
+### 43.1. Inventory
+
+| ID | Surface | Requirements |
+|----|---------|----------------|
+| 36.A | About / settings | Hide social fields; keep education |
+| 36.B | Schema | Guardian + consent columns; reuse `birthday` |
+| 36.C | Admin create | Age-conditional validation + UI |
+| 36.D | Visibility | Child (&lt;16) About empty for non-owners |
+| 36.E | Quality gate | Pest + Pint/PHPStan/lint/types |
+
+### 43.2. Phase 36 Acceptance Checklist
+
+- [x] Strangers do not see gender/hometown/workplace/birthday
+- [x] Creating a user under 16 without guardian fails
+- [x] Adult provision does not require guardian
+- [x] Pest + quality gates green
+
+---
+
+## 44. PHASE 38 — FIREBASE LIVE DM CACHE
+
+**Goal:** Peer text DMs render from Firebase RTDB in 0.3–1s. MySQL remains durable SoT. Images / share-to-DM stay Laravel-first.
+
+**Related:** ADR 0019 (amends 0014) · `docs/design/034-firebase-live-dm.md`
+
+### 44.1. Inventory
+
+| ID | Surface | Requirements |
+|----|---------|----------------|
+| 38.A | Docs | ADR 0019, amend 0014, design 034, inventory, OPS, Firebase README |
+| 38.B | RTDB + rules | Append-only `messages/{clientUuid}` + `last_message`; member writes; deploy rules |
+| 38.C | Persist | `client_uuid` idempotent; skip memberSync on send; Laravel publishes append path |
+| 38.D | Client | Text: RTDB write then POST; `onChildAdded` + dedup; images HTTP-first |
+| 38.E | Quality gate | Pest + Pint/PHPStan/lint/types; 2-browser text &lt;1s |
+
+### 44.2. Phase 38 Acceptance Checklist
+
+- [x] Text A→B appears from RTDB without waiting for POST 201
+- [x] Replay of the same `client_uuid` does not duplicate MySQL rows
+- [x] Image / share-to-DM still live via Laravel publish to the same path
+- [x] Reverb driver unchanged (no client RTDB write)
+- [x] Persist fail removes the live RTDB node
+- [x] Pest + quality gates green
+
+---
+
+## 45. PHASE 39 — CLIENT-ONLY DM RTDB
+
+**Goal:** The browser is the only writer of live DM nodes. Laravel persists MySQL only (no Admin REST dual-write).
+
+**Related:** ADR 0019 (Phase 39 amend) · `docs/design/034-firebase-live-dm.md`
+
+### 45.1. Inventory
+
+| ID | Surface | Requirements |
+|----|---------|----------------|
+| 39.A | Docs | Amend ADR 0019, inventory, OPS, design 034 |
+| 39.B | Server | `publishSent` no-op on Firebase; drop `message.sent` from FirebaseBroadcaster |
+| 39.C | Client | Image + share-to-DM: persist then client RTDB write |
+| 39.D | Rules | Forbid client `mysql_id` |
+| 39.E | Quality gate | Pest + Pint/PHPStan/lint/types |
+
+### 45.2. Phase 39 Acceptance Checklist
+
+- [x] Firebase driver does not Admin-write `messages/*` or `last_message`
+- [x] Text still RTDB-first; image/share live via client write after JSON
+- [x] Reverb still dispatches `MessageSent`
+- [x] Pest + quality gates green
+
+---
+
+## 46. PHASE 40 — FIREBASE-ONLY DMs
+
+**Goal:** 1:1 chat is durable on Firebase RTDB. MySQL no longer stores conversations or messages. Laravel is a mutual-follow + media gate.
+
+**Related:** ADR 0020 (amends 0014/0019/0008) · `docs/design/035-firebase-only-dms.md`
+
+### 46.1. Inventory
+
+| ID | Surface | Requirements |
+|----|---------|----------------|
+| 40.A | Docs | ADR 0020, amend 0014/0019/0008, design 035, inventory, OPS, SRS |
+| 40.B | Schema + rules | String `{minUid}_{maxUid}` cid; inbox/read rules; drop MySQL messaging tables |
+| 40.C | Laravel | `POST /messages/ensure`, `POST /messages/media`; Inertia shells; no persist/read |
+| 40.D | Client | Inbox/thread/composer/share Firebase-only; badge = sum inbox unread |
+| 40.E | Quality gate | Pest ensure/media; no `assertDatabaseHas('messages')`; types/lint |
+
+### 46.2. Phase 40 Acceptance Checklist
+
+- [x] Mutual followers can `ensure`; non-mutual cannot
+- [x] Text send does not POST `/messages/{id}/messages`
+- [x] Image upload returns `image_url` without a message row
+- [x] `GET /messages` is an Inertia shell (`conversations: []`)
+- [x] Non-participants cannot open another pair’s `{cid}`
+- [x] Pest + quality gates green
+
+---
+
+## 47. DOCUMENT HISTORY
 
 | Version | Date | Notes |
 |---------|------|--------|
+| 2.23 | 2026-08-15 | Phase 40 Firebase-only DMs (drop MySQL messages) |
+| 2.22 | 2026-08-15 | Phase 39 client-only DM RTDB (no Laravel dual-write) |
+| 2.21 | 2026-08-15 | Phase 38 Firebase live DM cache (client-first text, MySQL SoT) |
+| 2.20 | 2026-08-15 | Phases 33–36: Học Bá rebrand, legal pages, reports, minimal PII / under-18 |
+| 2.19 | 2026-08-15 | Added Phase 32 post moderation queue (admin approve before publish) |
+| 2.18 | 2026-08-15 | Added Phase 31 admin console layout (separate from social chrome) |
+| 2.17 | 2026-08-15 | Added Phase 30 admin-provisioned accounts (invite-only) |
 | 2.16 | 2026-08-09 | Added Phase 29 Messages mobile UX |
 | 2.15 | 2026-08-09 | Added Phase 28 Facebook-like share post |
 | 2.14 | 2026-08-09 | Abandoned liquid glass; simple solid mobile chrome retained |

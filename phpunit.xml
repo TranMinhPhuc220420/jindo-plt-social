@@ -19,6 +19,9 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="APP_NAME" value="PLT Học Bá"/>
+        <env name="APP_TAGLINE" value="Học để giỏi - Chia sẻ để cùng tiến bộ"/>
+        <env name="APP_SUBTITLE" value="Nền tảng cộng đồng học tập của PLT Solutions"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
@@ -32,5 +35,6 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="FORTIFY_PUBLIC_REGISTRATION" value="false"/>
     </php>
 </phpunit>

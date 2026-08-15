@@ -34,6 +34,12 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property array<string, string>|null $profile_privacy
  * @property string|null $avatar_path
  * @property string|null $cover_path
+ * @property string|null $guardian_name
+ * @property string|null $guardian_email
+ * @property string|null $guardian_relationship
+ * @property Carbon|null $guardian_consented_at
+ * @property Carbon|null $child_consented_at
+ * @property Carbon|null $under18_attested_at
  * @property UserRole $role
  * @property Carbon|null $suspended_at
  * @property string $email
@@ -65,6 +71,12 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
     'cover_path',
     'role',
     'suspended_at',
+    'guardian_name',
+    'guardian_email',
+    'guardian_relationship',
+    'guardian_consented_at',
+    'child_consented_at',
+    'under18_attested_at',
 ])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
@@ -85,6 +97,9 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'birthday' => 'date',
             'profile_privacy' => 'array',
             'role' => UserRole::class,
+            'guardian_consented_at' => 'datetime',
+            'child_consented_at' => 'datetime',
+            'under18_attested_at' => 'datetime',
         ];
     }
 
@@ -152,6 +167,25 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->suspended_at !== null;
     }
 
+    public function age(): ?int
+    {
+        return $this->birthday?->age;
+    }
+
+    public function isChild(): bool
+    {
+        $age = $this->age();
+
+        return $age !== null && $age < 16;
+    }
+
+    public function isUnder18(): bool
+    {
+        $age = $this->age();
+
+        return $age !== null && $age < 18;
+    }
+
     public function isFollowing(User $other): bool
     {
         return $this->following()->where('users.id', $other->id)->exists();
@@ -162,15 +196,6 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->id !== $other->id
             && $this->isFollowing($other)
             && $other->isFollowing($this);
-    }
-
-    /**
-     * @return BelongsToMany<Conversation, $this>
-     */
-    public function conversations(): BelongsToMany
-    {
-        return $this->belongsToMany(Conversation::class, 'conversation_participants')
-            ->withTimestamps();
     }
 
     public function avatarUrl(): ?string

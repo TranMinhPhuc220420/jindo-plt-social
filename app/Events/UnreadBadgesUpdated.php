@@ -16,7 +16,7 @@ class UnreadBadgesUpdated implements ShouldBroadcastNow
     public function __construct(
         public User $user,
         public int $unreadMessagesCount,
-        public ?int $unreadNotificationsCount = null,
+        public int $unreadNotificationsCount,
         public ?int $conversationId = null,
     ) {}
 
@@ -42,11 +42,8 @@ class UnreadBadgesUpdated implements ShouldBroadcastNow
     {
         $payload = [
             'unread_messages_count' => $this->unreadMessagesCount,
+            'unread_notifications_count' => $this->unreadNotificationsCount,
         ];
-
-        if ($this->unreadNotificationsCount !== null) {
-            $payload['unread_notifications_count'] = $this->unreadNotificationsCount;
-        }
 
         if ($this->conversationId !== null) {
             $payload['conversation_id'] = $this->conversationId;

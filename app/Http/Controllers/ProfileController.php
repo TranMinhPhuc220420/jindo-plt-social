@@ -25,8 +25,16 @@ class ProfileController extends Controller
 
         $viewer = $request->user();
 
-        $posts = $this->feedService->engagementQuery($viewer)
-            ->where('user_id', $profile->id)
+        $postsQuery = $this->feedService->engagementQuery($viewer)
+            ->where('user_id', $profile->id);
+
+        if ($viewer->id === $profile->id) {
+            $postsQuery->visibleTo($viewer);
+        } else {
+            $postsQuery->approved();
+        }
+
+        $posts = $postsQuery
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->cursorPaginate(15);

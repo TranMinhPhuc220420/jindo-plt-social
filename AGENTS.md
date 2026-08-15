@@ -1,10 +1,10 @@
-# AGENTS.md — PLT Social
+# AGENTS.md — PLT Học Bá
 
 Operating manual for coding agents. Keep this file short; deep specs live under `docs/`.
 
 ## Mission
 
-Build a phased social product on the **existing** Laravel React starter kit (Inertia + Fortify). Do not replace the stack.
+Build a phased **closed learning community** (PLT Học Bá) on the **existing** Laravel React starter kit (Inertia + Fortify). Do not replace the stack. Do not position the product as a public social network (ADR 0017).
 
 ## Read order (every implementation task)
 

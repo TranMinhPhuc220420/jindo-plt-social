@@ -3,35 +3,14 @@
 use App\Models\Post;
 use App\Models\PostMedia;
 use App\Models\User;
-use App\Services\ConversationService;
 use App\Support\MediaDisk;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
-test('shared unread messages count reflects unread inbound messages', function () {
-    $a = User::factory()->create();
-    $b = User::factory()->create();
+test('shared unread messages count is always zero from the server', function () {
+    $user = User::factory()->create();
 
-    $a->following()->attach($b->id);
-    $b->following()->attach($a->id);
-
-    $conversation = app(ConversationService::class)->findOrCreateBetween($a, $b);
-
-    $conversation->messages()->create([
-        'user_id' => $a->id,
-        'body' => 'Hello B',
-    ]);
-
-    $this->actingAs($b)
-        ->get(route('feed'))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page->where('auth.unread_messages_count', 1));
-
-    $this->actingAs($b)
-        ->get(route('messages.show', $conversation))
-        ->assertOk();
-
-    $this->actingAs($b)
+    $this->actingAs($user)
         ->get(route('feed'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->where('auth.unread_messages_count', 0));

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PostModerationStatus;
 use App\Models\Post;
 use App\Models\Tag;
 use App\Models\User;
@@ -23,6 +24,7 @@ class ExploreService
     public function trending(User $viewer, int $perPage = 15): LengthAwarePaginator
     {
         return $this->feedService->engagementQuery($viewer)
+            ->approved()
             ->where('created_at', '>=', now()->subHours(48))
             ->orderByRaw('(likes_count * 2 + comments_count) desc')
             ->orderByDesc('created_at')
@@ -35,9 +37,12 @@ class ExploreService
     public function trendingTags(int $days = 7, int $limit = 10): Collection
     {
         $rows = DB::table('post_tag')
-            ->select('tag_id', DB::raw('COUNT(*) as attachments_count'))
-            ->where('created_at', '>=', now()->subDays($days))
-            ->groupBy('tag_id')
+            ->join('posts', 'posts.id', '=', 'post_tag.post_id')
+            ->whereNull('posts.deleted_at')
+            ->where('posts.moderation_status', PostModerationStatus::Approved->value)
+            ->select('post_tag.tag_id', DB::raw('COUNT(*) as attachments_count'))
+            ->where('post_tag.created_at', '>=', now()->subDays($days))
+            ->groupBy('post_tag.tag_id')
             ->orderByDesc('attachments_count')
             ->limit($limit)
             ->get();

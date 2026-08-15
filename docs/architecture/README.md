@@ -1,6 +1,6 @@
 # Architecture
 
-Living notes on how PLT Social is structured in this repo. Keep entries short; link to code paths.
+Living notes on how PLT Học Bá is structured in this repo. Keep entries short; link to code paths.
 
 ## Contents
 

@@ -23,7 +23,7 @@ export default function ExploreIndex({ posts, trending_tags }: Props) {
                 <div>
                     <h1 className="text-xl font-bold">Explore</h1>
                     <p className="text-sm text-muted-foreground">
-                        Trending posts from the last 48 hours
+                        Trending notes from the last 48 hours
                     </p>
                 </div>
 
@@ -56,7 +56,7 @@ export default function ExploreIndex({ posts, trending_tags }: Props) {
                     {posts.data.length === 0 ? (
                         <EmptyState
                             title="Nothing trending yet"
-                            description="Check back soon as people like and comment on posts."
+                            description="Check back soon as members like and comment on posts."
                             action={
                                 <Button asChild>
                                     <Link href="/feed">Back to Home</Link>

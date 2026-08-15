@@ -22,9 +22,10 @@ test('users can share a post to their feed with empty caption', function () {
 
     expect($share)->not->toBeNull()
         ->and($share->body)->toBe('')
-        ->and($share->shared_post_id)->toBe($post->id);
+        ->and($share->shared_post_id)->toBe($post->id)
+        ->and($share->moderation_status->value)->toBe('pending');
 
-    Notification::assertSentTo($author, PostSharedNotification::class);
+    Notification::assertNotSentTo($author, PostSharedNotification::class);
     Notification::assertNotSentTo($sharer, PostSharedNotification::class);
 });
 
@@ -119,12 +120,41 @@ test('mutual followers can share a post via messages', function () {
             'body' => 'Check this out',
         ])
         ->assertRedirect();
+});
 
-    $this->assertDatabaseHas('messages', [
-        'user_id' => $sender->id,
-        'body' => 'Check this out',
-        'shared_post_id' => $post->id,
-    ]);
+test('share via messages json returns conversation payloads for client rtdb write', function () {
+    $author = User::factory()->create();
+    $sender = User::factory()->create();
+    $recipient = User::factory()->create();
+    $post = Post::factory()->create(['user_id' => $author->id]);
+
+    $sender->following()->attach($recipient->id);
+    $recipient->following()->attach($sender->id);
+
+    $cid = min($sender->id, $recipient->id).'_'.max($sender->id, $recipient->id);
+
+    $this->actingAs($sender)
+        ->postJson(route('posts.share-message', $post), [
+            'usernames' => [$recipient->username],
+            'body' => 'Live share',
+        ])
+        ->assertOk()
+        ->assertJsonPath('conversations.0.id', $cid)
+        ->assertJsonPath('conversations.0.body', 'Live share')
+        ->assertJsonPath('conversations.0.user.id', $sender->id)
+        ->assertJsonPath('conversations.0.other_user.id', $recipient->id)
+        ->assertJsonStructure([
+            'conversations' => [
+                [
+                    'id',
+                    'other_user' => ['id', 'name', 'username', 'avatar'],
+                    'body',
+                    'shared_post',
+                    'created_at',
+                    'user' => ['id', 'name', 'username', 'avatar'],
+                ],
+            ],
+        ]);
 });
 
 test('non-mutual users cannot receive a shared post via messages', function () {

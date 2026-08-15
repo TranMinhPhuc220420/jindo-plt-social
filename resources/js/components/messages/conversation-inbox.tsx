@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { NewMessageButton } from '@/components/messages/new-message-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useInitials } from '@/hooks/use-initials';
 import { relativeTime } from '@/lib/relative-time';
 import { cn } from '@/lib/utils';
@@ -11,13 +12,30 @@ import type { ConversationSummary } from '@/types';
 
 type Props = {
     conversations: ConversationSummary[];
-    activeId?: number | null;
+    activeId?: string | null;
     className?: string;
     /** Page title — use h1 on inbox index, p on thread aside. */
     titleAs?: 'h1' | 'p';
     /** When the inbox has zero conversations, replace the list. */
     emptyState?: ReactNode;
+    /** Show placeholder rows while the RTDB inbox is still hydrating. */
+    loading?: boolean;
 };
+
+function ConversationRowSkeleton() {
+    return (
+        <li className="flex items-center gap-3 px-3 py-3">
+            <Skeleton className="size-12 shrink-0 rounded-full md:size-11" />
+            <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex items-baseline justify-between gap-2">
+                    <Skeleton className="h-3.5 w-32" />
+                    <Skeleton className="h-2.5 w-8 shrink-0" />
+                </div>
+                <Skeleton className="h-3 w-48 max-w-full" />
+            </div>
+        </li>
+    );
+}
 
 /**
  * Shared Chats chrome: title + compose + pill search + conversation rows.
@@ -29,6 +47,7 @@ export function ConversationInbox({
     className,
     titleAs = 'p',
     emptyState,
+    loading = false,
 }: Props) {
     const getInitials = useInitials();
     const [query, setQuery] = useState('');
@@ -50,7 +69,8 @@ export function ConversationInbox({
     }, [conversations, query]);
 
     const TitleTag = titleAs;
-    const showEmpty = conversations.length === 0 && emptyState;
+    const isHydrating = loading && conversations.length === 0;
+    const showEmpty = !isHydrating && conversations.length === 0 && emptyState;
 
     return (
         <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
@@ -102,8 +122,18 @@ export function ConversationInbox({
             {showEmpty ? (
                 emptyState
             ) : (
-                <ul className="min-h-0 flex-1 overflow-y-auto">
-                    {filtered.length === 0 ? (
+                <ul
+                    className="min-h-0 flex-1 overflow-y-auto"
+                    aria-busy={isHydrating}
+                >
+                    {isHydrating ? (
+                        <>
+                            <li className="sr-only">Loading chats…</li>
+                            {[0, 1, 2, 3, 4].map((row) => (
+                                <ConversationRowSkeleton key={row} />
+                            ))}
+                        </>
+                    ) : filtered.length === 0 ? (
                         <li className="px-3 py-10 text-center text-sm text-muted-foreground">
                             {query.trim()
                                 ? 'No chats match your search'

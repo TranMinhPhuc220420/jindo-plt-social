@@ -1,8 +1,8 @@
 # ADR 0008: Messages auto-open + full-width shell
 
-- Status: Accepted (amended Phase 29)
+- Status: Accepted (amended Phase 29, Phase 40)
 - Date: 2026-08-09
-- Amended: 2026-08-09 (Phase 29 — mobile inbox-first)
+- Amended: 2026-08-09 (Phase 29 — mobile inbox-first); 2026-08-15 (Phase 40 — client-side auto-open from RTDB inbox)
 
 ## Context
 
@@ -12,8 +12,8 @@ Phase 29: on **mobile**, auto-open skips the inbox and makes switching chats har
 
 ## Decision
 
-1. **`GET /messages`**: if the user has any conversations, **302 redirect** to the conversation with the latest `updated_at`; otherwise render the empty inbox Inertia page.
-2. **`GET /messages?inbox=1`**: always render the inbox Inertia page (no redirect). Used by the **mobile dock** Messages tab and thread Back.
+1. **`GET /messages`**: Inertia inbox shell. After the client hydrates `users/{uid}/inbox`, **visit the latest `cid`** when any exist (no server 302 — MySQL no longer stores conversations; [ADR 0020](./0020-firebase-durable-dms.md)).
+2. **`GET /messages?inbox=1`**: stay on the inbox (no auto-open). Used by the **mobile dock** Messages tab and thread Back.
 3. **Messages layout**: dedicated shell — top bar + left rail, **no right rail**, main column **full width** (no `max-w-[680px]`).
 4. Phase **19** covers scroll-to-latest, composer polish, unread badges, and inbox search.
 5. Phase **29**: mobile immersive thread (hide top bar + dock), shared conversation list, composer/keyboard and emoji sheet polish. Desktop auto-open (1) unchanged.

@@ -20,9 +20,10 @@ Browser (React + Inertia)
 Realtime (Phase 2+): Laravel events → broadcast driver → client.
 
 - **Local:** Reverb → Echo (`BROADCAST_CONNECTION=reverb`).
-- **cPanel production:** Firebase Realtime Database event bus (`BROADCAST_CONNECTION=firebase`); MySQL remains source of truth.
+- **cPanel production:** Firebase Realtime Database (`BROADCAST_CONNECTION=firebase`). MySQL is SoT for users/follows/posts; **1:1 DMs are durable on RTDB** ([ADR 0020](../decisions/0020-firebase-durable-dms.md)). Notification badges stay an event bus ([ADR 0014](../decisions/0014-firebase-realtime-event-bus.md)).
+- The Inertia page shares `realtime.driver` so the client listens to the same driver the server publishes on.
 
-Living capability list: [`realtime-inventory.md`](./realtime-inventory.md). Decision: [ADR 0014](../decisions/0014-firebase-realtime-event-bus.md).
+Living capability list: [`realtime-inventory.md`](./realtime-inventory.md). Decisions: [ADR 0014](../decisions/0014-firebase-realtime-event-bus.md), [ADR 0020](../decisions/0020-firebase-durable-dms.md).
 
 ## Key directories
 

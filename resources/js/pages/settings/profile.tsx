@@ -22,17 +22,7 @@ const VISIBILITY_OPTIONS = [
 ] as const;
 
 const FIELD_INPUT: Record<string, { type: string; placeholder: string }> = {
-    workplace: { type: 'text', placeholder: 'Company or workplace' },
-    education: { type: 'text', placeholder: 'School or university' },
-    location: { type: 'text', placeholder: 'Current city' },
-    hometown: { type: 'text', placeholder: 'Hometown' },
-    website: { type: 'url', placeholder: 'https://example.com' },
-    birthday: { type: 'date', placeholder: '' },
-    gender: { type: 'text', placeholder: 'Gender' },
-    relationship_status: {
-        type: 'text',
-        placeholder: 'Single, In a relationship…',
-    },
+    education: { type: 'text', placeholder: 'School, university, or class' },
 };
 
 export default function Profile({
@@ -173,7 +163,7 @@ export default function Profile({
                                 <Heading
                                     variant="small"
                                     title="About details"
-                                    description="Shown on your Intro card. Set who can see each field."
+                                    description="School or class only. Other personal fields are not collected."
                                 />
 
                                 <div className="divide-y rounded-lg border bg-card">

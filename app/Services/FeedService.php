@@ -22,6 +22,7 @@ class FeedService
         $authorIds = $this->authorIdsFor($user);
 
         return $this->engagementQuery($user)
+            ->visibleTo($user)
             ->whereIn('user_id', $authorIds)
             ->orderByDesc('created_at')
             ->orderByDesc('id')

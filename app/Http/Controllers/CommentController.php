@@ -17,6 +17,8 @@ class CommentController extends Controller
 
     public function store(StoreCommentRequest $request, Post $post): RedirectResponse
     {
+        $this->authorize('engage', $post);
+
         $comment = $post->comments()->create([
             'user_id' => $request->user()->id,
             'parent_id' => $request->validated('parent_id'),

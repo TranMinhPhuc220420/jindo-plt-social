@@ -3,13 +3,16 @@
 namespace App\Providers;
 
 use App\Broadcasting\FirebaseBroadcaster;
+use App\Listeners\BroadcastUnreadBadgesOnNotification;
 use App\Services\Firebase\FirebaseRealtimePublisher;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -32,6 +35,8 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureRateLimiting();
         $this->configureBroadcasting();
+
+        Event::listen(NotificationSent::class, BroadcastUnreadBadgesOnNotification::class);
     }
 
     protected function configureBroadcasting(): void
@@ -85,6 +90,10 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('bookmarks', function (Request $request) {
             return Limit::perMinute(60)->by('bookmarks:'.$this->rateLimitKey($request));
+        });
+
+        RateLimiter::for('reports', function (Request $request) {
+            return Limit::perMinute(10)->by('reports:'.$this->rateLimitKey($request));
         });
     }
 

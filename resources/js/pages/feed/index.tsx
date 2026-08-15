@@ -22,7 +22,7 @@ export default function FeedIndex({ posts }: Props) {
                     <div className="rounded-lg bg-card shadow-xs">
                         <EmptyState
                             title="Your feed is empty"
-                            description="Follow people or explore trending posts to fill your Home."
+                            description="Follow classmates or explore recent posts to fill your Home."
                             action={
                                 <div className="flex flex-wrap justify-center gap-2">
                                     <Button asChild>

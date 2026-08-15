@@ -36,7 +36,7 @@ class FailedJobController extends Controller
             });
 
         return Inertia::render('admin/failed-jobs/index', [
-            'jobs' => $jobs,
+            'jobs' => $jobs->withQueryString(),
         ]);
     }
 }

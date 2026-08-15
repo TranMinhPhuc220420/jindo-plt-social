@@ -90,7 +90,7 @@ export function ProfileHeader({ profile, activeTab = 'posts' }: Props) {
                             />
                         ) : null}
                         {!profile.is_own && profile.can_message ? (
-                            <Form method="post" action="/messages">
+                            <Form method="post" action="/messages/ensure">
                                 <input
                                     type="hidden"
                                     name="username"

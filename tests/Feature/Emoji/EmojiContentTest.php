@@ -2,30 +2,6 @@
 
 use App\Models\Post;
 use App\Models\User;
-use App\Services\ConversationService;
-
-test('users can post emoji-only message body', function () {
-    $a = User::factory()->create();
-    $b = User::factory()->create();
-
-    $a->following()->attach($b->id);
-    $b->following()->attach($a->id);
-
-    $conversation = app(ConversationService::class)->findOrCreateBetween($a, $b);
-
-    $this->actingAs($a)
-        ->from(route('messages.show', $conversation))
-        ->post(route('messages.messages.store', $conversation), [
-            'body' => '🔥🎉',
-        ])
-        ->assertRedirect(route('messages.show', $conversation));
-
-    $this->assertDatabaseHas('messages', [
-        'conversation_id' => $conversation->id,
-        'user_id' => $a->id,
-        'body' => '🔥🎉',
-    ]);
-});
 
 test('users can create an emoji-only post', function () {
     $user = User::factory()->create();

@@ -1,16 +1,21 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { motion, useScroll, useTransform } from 'motion/react';
+import { LegalLinks } from '@/components/legal/legal-links';
 import { FadeIn } from '@/components/motion/fade-in';
 import { usePrefersReducedMotion } from '@/components/motion/use-prefers-reduced-motion';
 import { login, register } from '@/routes';
 
 export default function Welcome() {
-    const { auth, name } = usePage().props;
+    const { auth, name, tagline, subtitle, canRegister } = usePage().props;
     const reduce = usePrefersReducedMotion();
     const { scrollY } = useScroll();
     const layerSlow = useTransform(scrollY, [0, 400], [0, 80]);
     const layerFast = useTransform(scrollY, [0, 400], [0, 140]);
-    const brand = String(name ?? 'PLT Social');
+    const brand = String(name ?? 'PLT Học Bá');
+    const line = String(tagline ?? 'Học để giỏi - Chia sẻ để cùng tiến bộ');
+    const deck = String(
+        subtitle ?? 'Nền tảng cộng đồng học tập của PLT Solutions',
+    );
 
     return (
         <>
@@ -55,12 +60,14 @@ export default function Welcome() {
                                 >
                                     Log in
                                 </Link>
-                                <Link
-                                    href={register()}
-                                    className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground"
-                                >
-                                    Sign up
-                                </Link>
+                                {canRegister ? (
+                                    <Link
+                                        href={register()}
+                                        className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground"
+                                    >
+                                        Sign up
+                                    </Link>
+                                ) : null}
                             </>
                         )}
                     </nav>
@@ -81,33 +88,39 @@ export default function Welcome() {
                     </FadeIn>
                     <FadeIn delay={0.16} y={16}>
                         <p className="mt-2 max-w-xl text-xl font-medium text-primary">
-                            Connect with people who matter
+                            {line}
                         </p>
                     </FadeIn>
                     <FadeIn delay={0.2} y={16}>
-                        <p className="mt-4 max-w-lg text-lg text-muted-foreground">
-                            Share updates, follow friends, and stay in the loop
-                            — a social home built for real conversations.
+                        <p className="mt-3 max-w-lg text-base font-medium text-foreground">
+                            {deck}
+                        </p>
+                        <p className="mt-3 max-w-lg text-lg text-muted-foreground">
+                            Chỉ thành viên được PLT cấp tài khoản — học viên,
+                            sinh viên, thực tập sinh. Không mở đăng ký công
+                            khai.
                         </p>
                     </FadeIn>
                     {!auth.user ? (
                         <FadeIn delay={0.28} y={14}>
                             <div className="mt-8 flex flex-wrap gap-3">
-                                <motion.div
-                                    whileHover={
-                                        reduce ? undefined : { scale: 1.03 }
-                                    }
-                                    whileTap={
-                                        reduce ? undefined : { scale: 0.98 }
-                                    }
-                                >
-                                    <Link
-                                        href={register()}
-                                        className="inline-block rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm"
+                                {canRegister ? (
+                                    <motion.div
+                                        whileHover={
+                                            reduce ? undefined : { scale: 1.03 }
+                                        }
+                                        whileTap={
+                                            reduce ? undefined : { scale: 0.98 }
+                                        }
                                     >
-                                        Create account
-                                    </Link>
-                                </motion.div>
+                                        <Link
+                                            href={register()}
+                                            className="inline-block rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm"
+                                        >
+                                            Create account
+                                        </Link>
+                                    </motion.div>
+                                ) : null}
                                 <motion.div
                                     whileHover={
                                         reduce ? undefined : { scale: 1.03 }
@@ -118,7 +131,11 @@ export default function Welcome() {
                                 >
                                     <Link
                                         href={login()}
-                                        className="inline-block rounded-full border bg-card px-6 py-3 text-sm font-semibold shadow-sm"
+                                        className={
+                                            canRegister
+                                                ? 'inline-block rounded-full border bg-card px-6 py-3 text-sm font-semibold shadow-sm'
+                                                : 'inline-block rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm'
+                                        }
                                     >
                                         Log in
                                     </Link>
@@ -127,6 +144,9 @@ export default function Welcome() {
                         </FadeIn>
                     ) : null}
                 </main>
+                <footer className="relative z-10 px-6 pb-8">
+                    <LegalLinks className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground" />
+                </footer>
             </div>
         </>
     );

@@ -3,7 +3,6 @@
 namespace App\Http\Middleware;
 
 use App\Services\ExploreService;
-use App\Services\UnreadMessageService;
 use App\Support\NotificationPresenter;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -43,15 +42,16 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'tagline' => config('app.tagline'),
+            'subtitle' => config('app.subtitle'),
+            'canRegister' => (bool) config('fortify.public_registration'),
             'auth' => [
                 'user' => $user,
                 // Closures resolve after the controller so mark-read on index is reflected.
                 'unread_notifications_count' => fn () => $user
                     ? $user->unreadNotifications()->count()
                     : 0,
-                'unread_messages_count' => fn () => $user
-                    ? app(UnreadMessageService::class)->countFor($user)
-                    : 0,
+                'unread_messages_count' => 0,
             ],
             'recent_notifications' => fn () => $user
                 ? NotificationPresenter::collection(
@@ -62,6 +62,24 @@ class HandleInertiaRequests extends Middleware
                 ? app(ExploreService::class)->trendingTags(7, 8)
                 : [],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'realtime' => [
+                'driver' => $this->realtimeDriver(),
+            ],
         ];
+    }
+
+    /**
+     * Driver the frontend should subscribe with. Must match BROADCAST_CONNECTION
+     * so leftover VITE_FIREBASE_* cannot steal Echo, and vice versa.
+     */
+    private function realtimeDriver(): ?string
+    {
+        $driver = config('broadcasting.default');
+
+        if ($driver === 'firebase' || $driver === 'reverb') {
+            return $driver;
+        }
+
+        return null;
     }
 }

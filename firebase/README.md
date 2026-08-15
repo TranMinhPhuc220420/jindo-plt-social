@@ -1,10 +1,17 @@
 # Firebase Realtime Database
 
-Security rules for the PLT Social event bus live in [`database.rules.json`](./database.rules.json).
+Security rules live in [`database.rules.json`](./database.rules.json).
 
-MySQL remains the source of truth. RTDB paths under `realtime/` are ephemeral UI events only — see [`docs/architecture/realtime-inventory.md`](../docs/architecture/realtime-inventory.md).
+MySQL remains the source of truth for users, follows, and posts. RTDB under `realtime/` is:
+
+- **Durable 1:1 DMs** (`conversations/{minUid}_{maxUid}/…` + `users/{uid}/inbox`) — [ADR 0020](../docs/decisions/0020-firebase-durable-dms.md)
+- **Event bus** for notification badges and the bell — [ADR 0014](../docs/decisions/0014-firebase-realtime-event-bus.md)
+
+Inventory: [`docs/architecture/realtime-inventory.md`](../docs/architecture/realtime-inventory.md).
 
 ## Deploy rules
+
+**Required after Phase 40** — string conversation ids, client inbox/read writes, member-only Admin `members` map. Old numeric-cid rules will `permission_denied`.
 
 ```bash
 # With Firebase CLI (project already selected)

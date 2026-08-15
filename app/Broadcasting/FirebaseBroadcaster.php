@@ -67,8 +67,8 @@ class FirebaseBroadcaster extends Broadcaster
             ? Str::after($channel, 'private-')
             : $channel;
 
-        if (preg_match('/^conversation\.(\d+)$/', $name, $matches) === 1) {
-            $this->publishConversationEvent((int) $matches[1], $event, $payload);
+        if (preg_match('/^conversation\.(\d+_\d+|\d+)$/', $name, $matches) === 1) {
+            $this->publishConversationEvent((string) $matches[1], $event, $payload);
 
             return;
         }
@@ -81,17 +81,8 @@ class FirebaseBroadcaster extends Broadcaster
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function publishConversationEvent(int $conversationId, string $event, array $payload): void
+    private function publishConversationEvent(string $conversationId, string $event, array $payload): void
     {
-        if ($event === 'message.sent') {
-            $this->publisher->set(
-                "realtime/conversations/{$conversationId}/events/message",
-                $payload,
-            );
-
-            return;
-        }
-
         if ($event === 'user.typing') {
             $userId = data_get($payload, 'user.id');
 
@@ -116,7 +107,7 @@ class FirebaseBroadcaster extends Broadcaster
     private function publishUserEvent(int $userId, string $event, array $payload): void
     {
         if ($event === 'unread.badges') {
-            $this->publisher->update(
+            $this->publisher->set(
                 "realtime/users/{$userId}/badges",
                 $payload,
             );
@@ -134,9 +125,13 @@ class FirebaseBroadcaster extends Broadcaster
 
     private function isNotificationEvent(string $event): bool
     {
-        return $event === BroadcastNotificationCreated::class
-            || str_ends_with($event, 'BroadcastNotificationCreated')
-            || $event === 'Illuminate\\Notifications\\Events\\BroadcastNotificationCreated';
+        if ($event === BroadcastNotificationCreated::class
+            || str_ends_with($event, 'BroadcastNotificationCreated')) {
+            return true;
+        }
+
+        return str_starts_with($event, 'App\\Notifications\\')
+            || str_starts_with($event, 'App.Notifications.');
     }
 
     /**
@@ -151,6 +146,10 @@ class FirebaseBroadcaster extends Broadcaster
             if ($userId !== null) {
                 $payload['origin_user_id'] = (int) $userId;
             }
+        }
+
+        if (! array_key_exists('at', $payload)) {
+            $payload['at'] = (int) floor(microtime(true) * 1000);
         }
 
         return $payload;

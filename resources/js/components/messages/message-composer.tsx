@@ -4,20 +4,26 @@ import { toast } from 'sonner';
 import { EmojiPickerButton } from '@/components/emoji/emoji-picker-button';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
 import { insertTextAtCursor } from '@/lib/emoji';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import {
+    allocateConversationMessageId,
+    isFirebaseDmEnabled,
+    publishLiveConversationMessage,
+    removeLiveConversationMessage,
+} from '@/lib/realtime';
 import { cn } from '@/lib/utils';
-import { store as storeMessage } from '@/routes/messages/messages';
 import type { ChatMessage, MessageUser } from '@/types';
 
 type Props = {
-    conversationId: number;
+    conversationId: string;
     self: MessageUser;
+    otherUser: MessageUser;
     /** Called with true while the draft is non-empty; false on clear/send/blur. */
     onTypingChange?: (isTyping: boolean) => void;
     onOptimistic?: (message: ChatMessage) => void;
-    onConfirmed?: (message: ChatMessage, clientId: number) => void;
-    onFailed?: (clientId: number) => void;
+    onConfirmed?: (message: ChatMessage, clientId: string) => void;
+    onFailed?: (clientId: string) => void;
     onSent?: () => void;
 };
 
@@ -30,11 +36,10 @@ function xsrfToken(): string | undefined {
     return raw ? decodeURIComponent(raw) : undefined;
 }
 
-let tempIdSeq = -1;
-
 export function MessageComposer({
     conversationId,
     self,
+    otherUser,
     onTypingChange,
     onOptimistic,
     onConfirmed,
@@ -46,8 +51,8 @@ export function MessageComposer({
     const [body, setBody] = useState('');
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [hasFile, setHasFile] = useState(false);
-    const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState<{ body?: string; image?: string }>({});
+    const bodyRef = useRef(body);
 
     useEffect(() => {
         // Desktop only — autofocus on mobile opens the soft keyboard immediately.
@@ -92,13 +97,15 @@ export function MessageComposer({
         const el = textareaRef.current;
 
         if (!el) {
-            setBody((current) => current + emoji);
+            bodyRef.current = bodyRef.current + emoji;
+            setBody(bodyRef.current);
             onTypingChange?.(true);
 
             return;
         }
 
         const { value, selectionStart } = insertTextAtCursor(el, emoji);
+        bodyRef.current = value;
         setBody(value);
         onTypingChange?.(value.trim().length > 0);
 
@@ -112,6 +119,7 @@ export function MessageComposer({
     const canSend = body.trim().length > 0 || hasFile;
 
     const resetComposer = (options?: { revokePreview?: boolean }) => {
+        bodyRef.current = '';
         setBody('');
         setHasFile(false);
         onTypingChange?.(false);
@@ -136,43 +144,40 @@ export function MessageComposer({
     };
 
     const send = async () => {
-        if (processing || !canSend) {
+        const trimmed = bodyRef.current.trim();
+        const file = fileRef.current?.files?.[0] ?? null;
+
+        if (trimmed.length === 0 && file === null) {
             return;
         }
 
-        const trimmed = body.trim();
-        const file = fileRef.current?.files?.[0] ?? null;
-        const clientId = tempIdSeq--;
+        bodyRef.current = '';
+
+        // Reserve the RTDB key now so the optimistic bubble and the echo of our
+        // own write share one id instead of rendering as two messages.
+        const optimisticId =
+            allocateConversationMessageId(conversationId) ??
+            `opt-${crypto.randomUUID()}`;
         const localPreview = previewUrl;
+        const createdAt = new Date().toISOString();
 
         const optimistic: ChatMessage = {
-            id: clientId,
+            id: optimisticId,
+            client_id: optimisticId,
+            conversation_id: conversationId,
             body: trimmed.length > 0 ? trimmed : null,
             image_url: localPreview,
             shared_post: null,
             read_at: null,
-            created_at: new Date().toISOString(),
+            created_at: createdAt,
+            at: Date.now(),
             user: self,
             is_mine: true,
         };
 
         onOptimistic?.(optimistic);
-        // Keep blob URL alive for the optimistic bubble until confirm/fail.
         resetComposer({ revokePreview: false });
         onSent?.();
-        setProcessing(true);
-
-        const formData = new FormData();
-
-        if (trimmed.length > 0) {
-            formData.append('body', trimmed);
-        }
-
-        if (file) {
-            formData.append('image', file);
-        }
-
-        const token = xsrfToken();
 
         const releasePreview = () => {
             if (localPreview) {
@@ -180,59 +185,108 @@ export function MessageComposer({
             }
         };
 
-        try {
-            const response = await fetch(storeMessage.url(conversationId), {
-                method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    ...(token ? { 'X-XSRF-TOKEN': token } : {}),
-                },
-                credentials: 'same-origin',
-                body: formData,
-            });
+        let liveClientId: string | null = null;
 
-            if (response.status === 422) {
-                const payload = (await response.json()) as {
-                    message?: string;
-                    errors?: Record<string, string[]>;
-                };
+        const failSend = async () => {
+            onFailed?.(optimisticId);
 
-                onFailed?.(clientId);
-                releasePreview();
-                setBody(trimmed);
-                setErrors({
-                    body: payload.errors?.body?.[0],
-                    image: payload.errors?.image?.[0],
-                });
-                toast.error(payload.message ?? 'Could not send message.');
-
-                return;
+            if (liveClientId) {
+                await removeLiveConversationMessage(
+                    conversationId,
+                    liveClientId,
+                );
             }
 
-            if (!response.ok) {
-                onFailed?.(clientId);
-                releasePreview();
-                setBody(trimmed);
+            releasePreview();
+        };
+
+        if (!isFirebaseDmEnabled() || !isFirebaseConfigured()) {
+            await failSend();
+            toast.error('Messages need Firebase to send.');
+
+            return;
+        }
+
+        try {
+            let imageUrl: string | null = null;
+
+            if (file) {
+                const formData = new FormData();
+                formData.append('image', file);
+                const token = xsrfToken();
+                const response = await fetch('/messages/media', {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        ...(token ? { 'X-XSRF-TOKEN': token } : {}),
+                    },
+                    credentials: 'same-origin',
+                    body: formData,
+                });
+
+                if (response.status === 422) {
+                    const payload = (await response.json()) as {
+                        message?: string;
+                        errors?: Record<string, string[]>;
+                    };
+
+                    await failSend();
+                    toast.error(payload.message ?? 'Could not upload photo.');
+
+                    return;
+                }
+
+                if (!response.ok) {
+                    await failSend();
+                    toast.error('Could not upload photo.');
+
+                    return;
+                }
+
+                const uploaded = (await response.json()) as {
+                    image_url?: string;
+                };
+                imageUrl = uploaded.image_url ?? null;
+
+                if (!imageUrl) {
+                    await failSend();
+                    toast.error('Could not upload photo.');
+
+                    return;
+                }
+            }
+
+            liveClientId = await publishLiveConversationMessage({
+                conversation_id: conversationId,
+                client_id: optimisticId,
+                body: trimmed.length > 0 ? trimmed : null,
+                image_url: imageUrl,
+                created_at: createdAt,
+                user: self,
+                other_user: otherUser,
+            });
+
+            if (!liveClientId) {
+                await failSend();
                 toast.error('Could not send message.');
 
                 return;
             }
 
-            const message = (await response.json()) as ChatMessage;
-            onConfirmed?.(message, clientId);
+            onConfirmed?.(
+                {
+                    ...optimistic,
+                    id: liveClientId,
+                    client_id: liveClientId,
+                    image_url: imageUrl ?? optimistic.image_url,
+                },
+                optimisticId,
+            );
             releasePreview();
         } catch {
-            onFailed?.(clientId);
-            releasePreview();
-            setBody(trimmed);
+            await failSend();
             toast.error('Could not send message.');
-        } finally {
-            setProcessing(false);
-            requestAnimationFrame(() => {
-                textareaRef.current?.focus();
-                resizeTextarea();
-            });
         }
     };
 
@@ -307,6 +361,7 @@ export function MessageComposer({
                         value={body}
                         onChange={(event) => {
                             const next = event.target.value;
+                            bodyRef.current = next;
                             setBody(next);
                             onTypingChange?.(next.trim().length > 0);
                             resizeTextarea();
@@ -325,7 +380,7 @@ export function MessageComposer({
                             if (event.key === 'Enter' && !event.shiftKey) {
                                 event.preventDefault();
 
-                                if (!processing && canSend) {
+                                if (canSend) {
                                     onTypingChange?.(false);
                                     void send();
                                 }
@@ -341,7 +396,7 @@ export function MessageComposer({
                         type="submit"
                         size="icon"
                         variant="ghost"
-                        disabled={processing || !canSend}
+                        disabled={!canSend}
                         className={cn(
                             'mb-0.5 size-11 shrink-0 rounded-full',
                             canSend
@@ -350,11 +405,7 @@ export function MessageComposer({
                         )}
                         aria-label="Send"
                     >
-                        {processing ? (
-                            <Spinner />
-                        ) : (
-                            <SendHorizontal className="size-5" />
-                        )}
+                        <SendHorizontal className="size-5" />
                     </Button>
                 </div>
 

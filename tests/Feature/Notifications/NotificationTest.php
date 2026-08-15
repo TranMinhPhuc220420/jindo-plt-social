@@ -1,11 +1,13 @@
 <?php
 
+use App\Events\UnreadBadgesUpdated;
 use App\Models\Post;
 use App\Models\PostMedia;
 use App\Models\User;
 use App\Notifications\PostLikedNotification;
 use App\Notifications\UserFollowedNotification;
 use App\Support\NotificationPresenter;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 
 test('following another user creates a notification', function () {
@@ -80,4 +82,39 @@ test('mark all notifications as read', function () {
         ->assertRedirect();
 
     expect($author->fresh()->unreadNotifications()->count())->toBe(0);
+});
+
+test('creating a notification broadcasts a complete unread badge snapshot', function () {
+    Event::fake([UnreadBadgesUpdated::class]);
+
+    $author = User::factory()->create();
+    $viewer = User::factory()->create();
+    $post = Post::factory()->create(['user_id' => $author->id]);
+
+    $author->notify(new PostLikedNotification($viewer, $post));
+
+    Event::assertDispatched(UnreadBadgesUpdated::class, function (UnreadBadgesUpdated $event) use ($author) {
+        return $event->user->is($author)
+            && $event->unreadNotificationsCount === 1
+            && $event->unreadMessagesCount === 0;
+    });
+});
+
+test('marking notifications read broadcasts a zero notification badge', function () {
+    Event::fake([UnreadBadgesUpdated::class]);
+
+    $author = User::factory()->create();
+    $viewer = User::factory()->create();
+    $post = Post::factory()->create(['user_id' => $author->id]);
+
+    $author->notify(new PostLikedNotification($viewer, $post));
+
+    $this->actingAs($author)
+        ->patch(route('notifications.read-all'))
+        ->assertRedirect();
+
+    Event::assertDispatched(UnreadBadgesUpdated::class, function (UnreadBadgesUpdated $event) use ($author) {
+        return $event->user->is($author)
+            && $event->unreadNotificationsCount === 0;
+    });
 });

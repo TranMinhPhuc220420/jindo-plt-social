@@ -174,4 +174,17 @@ return [
         ]),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Public self-registration
+    |--------------------------------------------------------------------------
+    |
+    | Fortify still registers GET/POST /register (Wayfinder). When this is
+    | false, POST /register aborts 403 and GET shows a closed page. Admins
+    | create accounts from /admin/users. Set true to restore self-signup.
+    |
+    */
+
+    'public_registration' => (bool) env('FORTIFY_PUBLIC_REGISTRATION', false),
+
 ];

@@ -20,7 +20,7 @@ Phases 1–7 shipped full social product behavior on the Laravel React starter k
 ## Consequences
 
 - Agents must follow Active phase in PROGRESS; Phase 8 must land before visual work on feed/profile/etc.
-- `AppSidebarLayout` is no longer the long-term primary social chrome (may remain for admin/settings temporarily until Phase 15).
+- `AppSidebarLayout` is no longer the social chrome. **Admin** (`/admin/*`) uses a dedicated inset sidebar console (`AdminLayout`); settings stay on the social shell.
 - §7.4 NFR updates: empty states with CTA, social density, hide admin-style breadcrumbs on social surfaces.
 
 ## Alternatives considered

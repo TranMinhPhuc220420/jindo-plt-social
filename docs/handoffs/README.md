@@ -44,4 +44,6 @@ Write a handoff when ending a long session, switching agents/people, or context 
 
 | File | Summary |
 |------|---------|
-| _(none yet)_ | |
+| [20260815-client-only-dm-rtdb.md](./20260815-client-only-dm-rtdb.md) | Phase 39: client-only DM RTDB, no Laravel dual-write |
+| [20260815-firebase-live-dm.md](./20260815-firebase-live-dm.md) | Phase 38: RTDB live DM cache, client-first text |
+| [20260815-realtime-firebase-badges.md](./20260815-realtime-firebase-badges.md) | Phase 37: Firebase/Echo badge reliability |

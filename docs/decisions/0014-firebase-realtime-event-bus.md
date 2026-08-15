@@ -1,7 +1,8 @@
 # ADR 0014: Firebase Realtime Database as event bus (MySQL SoT)
 
-- Status: Accepted
+- Status: Accepted (amended Phase 38 / ADR 0019; Phase 40 / ADR 0020)
 - Date: 2026-08-11
+- Amended: 2026-08-15 (live DM cache — [ADR 0019](./0019-firebase-live-dm-cache.md); durable DMs — [ADR 0020](./0020-firebase-durable-dms.md))
 
 ## Context
 
@@ -11,7 +12,7 @@ We need realtime UX on production without moving the system of record off MySQL,
 
 ## Decision
 
-1. Use **Firebase Realtime Database (RTDB)** only as an **event bus** for UI payloads (messages, badges, notifications, typing). **MySQL remains the source of truth.** Event nodes under `realtime/.../events/*` are **overwrite** paths (not append-only history).
+1. Use **Firebase Realtime Database (RTDB)** as a **realtime UI layer**. **MySQL remains the source of truth for users, follows, posts, and notifications.** Badge and notification nodes under `realtime/.../events/*` and `…/badges` stay **overwrite** event-bus paths. Direct messages (Phase 40 / [ADR 0020](./0020-firebase-durable-dms.md)) are **durable on RTDB** at `realtime/conversations/{minUid}_{maxUid}/` — not a MySQL SoT and not overwrite `events/message`.
 2. Add a custom Laravel broadcast driver `firebase` so existing events and notifications keep working.
 3. Keep **Reverb + Echo** available locally via `BROADCAST_CONNECTION=reverb`.
 4. On cPanel: `BROADCAST_CONNECTION=firebase` with Admin SDK credentials outside the web root.

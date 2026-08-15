@@ -37,7 +37,7 @@ function NewMessageForm({
     return (
         <Form
             method="post"
-            action="/messages"
+            action="/messages/ensure"
             className="space-y-3"
             resetOnSuccess
             onSuccess={onSuccess}

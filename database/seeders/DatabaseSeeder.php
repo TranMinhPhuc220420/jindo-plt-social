@@ -15,10 +15,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $testUser = LearningCommunityCatalog::testUser();
+
         User::factory()->create([
-            'name' => 'Test User',
-            'username' => 'testuser',
-            'email' => 'test@example.com',
+            'name' => $testUser['name'],
+            'username' => $testUser['username'],
+            'email' => $testUser['email'],
+            'bio' => $testUser['bio'],
+            'education' => $testUser['education'],
+            'birthday' => $testUser['birthday'],
         ]);
 
         if (app()->environment('local')) {

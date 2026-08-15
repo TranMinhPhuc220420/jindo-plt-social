@@ -1,4 +1,4 @@
-# PLT Social — Phase Progress
+# PLT Học Bá — Phase Progress
 
 > **Source of truth for implementation status.**  
 > Spec details live in [`SRS.md`](./SRS.md). Agents must update this file when starting or finishing work (see `.cursor/rules/phase-progress.mdc`).
@@ -20,8 +20,8 @@
 |-------|--------|
 | **Active phase** | `—` |
 | **Active item** | `—` |
-| **Last updated** | `2026-08-11` |
-| **Last note** | Firebase RTDB event bus (MySQL SoT) for cPanel realtime; inventory in `docs/architecture/realtime-inventory.md`. |
+| **Last updated** | `2026-08-15` |
+| **Last note** | Phase 40 complete: Firebase-only DMs; MySQL messaging tables dropped. Deploy RTDB rules. Follow-up: inbox loading skeleton + no duplicate bubble on send. |
 
 ---
 
@@ -56,6 +56,123 @@
 - [x] **Phase 27** — Mobile glass overlays + page walk
 - [x] **Phase 28** — Facebook-like share post
 - [x] **Phase 29** — Messages mobile UX
+- [x] **Phase 30** — Admin-provisioned accounts
+- [x] **Phase 31** — Admin console layout
+- [x] **Phase 32** — Post moderation queue
+- [x] **Phase 33** — PLT Học Bá rebrand
+- [x] **Phase 34** — Community legal pages
+- [x] **Phase 35** — Content reports
+- [x] **Phase 36** — Minimal PII + under-18
+- [x] **Phase 37** — Realtime Firebase reliability (badges)
+- [x] **Phase 38** — Firebase live DM cache
+- [x] **Phase 39** — Client-only DM RTDB
+- [x] **Phase 40** — Firebase-only DMs
+
+---
+
+## Phase 33 — PLT Học Bá rebrand
+
+- [x] 33.A Docs (ADR 0017, design 030, SRS)
+- [x] 33.B Config / meta (`APP_NAME`, tagline, OG)
+- [x] 33.C Copy (welcome, auth, composer, empty states)
+- [x] 33.D Quality gate
+
+---
+
+## Phase 34 — Community legal pages
+
+- [x] 34.A Docs + `resources/legal/*.md`
+- [x] 34.B Public `/guidelines` `/privacy` `/copyright`
+- [x] 34.C Footer + composer notice
+- [x] 34.D Quality gate
+
+---
+
+## Phase 35 — Content reports
+
+- [x] 35.A Schema + model/policy
+- [x] 35.B Member report UX
+- [x] 35.C Admin queue
+- [x] 35.D Quality gate
+
+---
+
+## Phase 36 — Minimal PII + under-18
+
+- [x] 36.A About/settings education only
+- [x] 36.B Guardian columns + accessors
+- [x] 36.C Admin provision age rules
+- [x] 36.D Child About hidden from strangers
+- [x] 36.E Quality gate
+
+---
+
+## Phase 37 — Realtime Firebase reliability (badges)
+
+- [x] 37.A Diagnose env/driver mismatch (local: `BROADCAST_CONNECTION=firebase` without Admin SDK / `VITE_FIREBASE_*`)
+- [x] 37.B Share `realtime.driver`; client matches server; `authStateReady` + token retry; require `DATABASE_URL`
+- [x] 37.C Badge snapshot: `UnreadBadgeBroadcaster` always publishes both counts; notification event only prepends bell; recent `skipInitial` window
+- [x] 37.D Inertia decrease-only after mount (prefetch must not wipe live bumps)
+- [x] 37.E Quality gate
+
+---
+
+## Phase 38 — Firebase live DM cache
+
+- [x] 38.A Docs (ADR 0019, design 034, SRS)
+- [x] 38.B RTDB schema + Security Rules
+- [x] 38.C Persist (`client_uuid`, skip memberSync on send)
+- [x] 38.D Client write + `onChildAdded`
+- [x] 38.E Quality gate
+
+---
+
+## Phase 39 — Client-only DM RTDB
+
+- [x] 39.A Docs (ADR 0019 amend, inventory, OPS)
+- [x] 39.B Server: `publishSent` no-op on Firebase
+- [x] 39.C Client: image + share-to-DM RTDB after persist
+- [x] 39.D Rules (no `mysql_id`) + quality gate
+
+---
+
+## Phase 40 — Firebase-only DMs
+
+- [x] 40.A Docs (ADR 0020, design 035, SRS)
+- [x] 40.B RTDB schema + Security Rules + drop MySQL messaging tables
+- [x] 40.C Laravel thin gate (`ensure`, `media`, Inertia shells)
+- [x] 40.D Client inbox/thread/composer/share + inbox unread badge
+- [x] 40.E Quality gate
+
+---
+
+## Phase 32 — Post moderation queue
+
+- [x] 32.A Docs (ADR 0016, design 029, SRS)
+- [x] 32.B Schema (status, reason, reviewer) + PostModerationService
+- [x] 32.C Public visibility (approved-only; author sees own pending/rejected)
+- [x] 32.D Create/update/share pending vs admin auto-approve; deferred notifications
+- [x] 32.E Admin queue UI (rich `/admin/posts`, approve/reject, dashboard pending)
+- [x] 32.F Author UX (badges, reject reason, hide engage until approved)
+- [x] 32.G Quality gate
+
+---
+
+## Phase 31 — Admin console layout
+
+- [x] 31.A Docs (ADR 0006 amend, design 028, SRS)
+- [x] 31.B Admin shell (sidebar layout, full-width, no social chrome)
+- [x] 31.C Dashboard cards + tables (pagination, badges, search)
+- [x] 31.D Quality gate
+
+---
+
+## Phase 30 — Admin-provisioned accounts
+
+- [x] 30.A Docs (ADR 0015, SRS, design 014)
+- [x] 30.B Disable public registration (`FORTIFY_PUBLIC_REGISTRATION`, closed register view, hide Sign up)
+- [x] 30.C Admin create user (policy, Form Request, dialog, audit, verified)
+- [x] 30.D Quality gate
 
 ---
 
@@ -835,6 +952,23 @@
 
 | Date | Phase | Change |
 |------|-------|--------|
+| 2026-08-15 | 40 | DM polish: inbox skeleton while RTDB hydrates; pre-allocate push key so own send no longer renders twice. |
+| 2026-08-15 | 40 | Phase 40 complete: Firebase-only DMs (string `{minUid}_{maxUid}` cid, drop MySQL messages). Pest 199; pint/phpstan/tsc/eslint green. Deploy `firebase/database.rules.json`. |
+| 2026-08-15 | 39 | Stop mark-read spam: skip hydrated RTDB replay; debounce POST `/messages/{id}/read`. |
+| 2026-08-15 | 39 | Phase 39 complete: client-only DM RTDB; `publishSent` no-op on Firebase; image/share persist then client write. |
+| 2026-08-15 | 39 | Specced Phase 39 client-only DM RTDB (no Laravel dual-write); Active → 39.A. |
+| 2026-08-15 | 38 | Composer fire-and-forget: no spinner / wait for POST before the next send. |
+| 2026-08-15 | 38 | Phase 38 complete: client-first text DMs on RTDB append cache; MySQL idempotent `client_uuid`; memberSync off send path. Deploy `firebase/database.rules.json`. |
+| 2026-08-15 | 38 | Specced Phase 38 Firebase live DM cache (ADR 0019); Active → 38.A. |
+| 2026-08-15 | 37 | Realtime Firebase badges: `realtime.driver` alignment, notification counts on RTDB badges path, Inertia decrease-only so prefetch cannot wipe live bumps. |
+| 2026-08-15 | — | Local demo seed: Vietnamese learning-community posts (Gemini/ChatGPT/Claude, Pest/Laravel) + Unsplash/Wikimedia images on MediaDisk. |
+| 2026-08-15 | — | Pin REDIS_PREFIX / HORIZON_PREFIX so APP_NAME rebrand does not strand ProcessPostMediaJob. |
+| 2026-08-15 | 33–36 | PLT Học Bá: rebrand + legal pages + content reports + minimal About / under-18 provision. Pest 191. |
+| 2026-08-15 | 33 | Specced Phases 33–36 (Học Bá rebrand, legal, reports, PII/under-18); Active → 33.B. |
+| 2026-08-15 | 32 | Phase 32 complete: member posts pending until admin approve/reject; rich `/admin/posts` queue; author badges + deferred mention/share notify. |
+| 2026-08-15 | 32 | Specced Phase 32 post moderation queue (ADR 0016, design 029); Active → 32.A. |
+| 2026-08-15 | 31 | Admin console: dedicated sidebar layout (no social 680px chrome); clickable dashboard cards; users/posts search + pagination. |
+| 2026-08-15 | 30 | Admin-provisioned accounts: lock public Fortify register (403 + closed page); admin Create user dialog with temp password, verified role=user, audit `user.created`. |
 | 2026-08-09 | 29 | Inbox chrome polish: ConversationInbox (pill search + PenSquare compose); sheet/dialog New message; drop inline Start chat form. |
 | 2026-08-09 | 29 | Phase 29 complete: mobile inbox-first, immersive thread, ConversationList + New sheet, visualViewport, emoji Sheet. Pest MessagingTest 9/9; types/lint green. |
 | 2026-08-09 | 29 | Specced Phase 29 Messages mobile UX (ADR 0008 amend, design 027); Active → 29.A. |

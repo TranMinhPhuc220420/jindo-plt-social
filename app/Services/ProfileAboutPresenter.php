@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PostModerationStatus;
 use App\Enums\ProfileFieldVisibility;
 use App\Models\PostMedia;
 use App\Models\User;
@@ -16,42 +17,21 @@ class ProfileAboutPresenter
      * @var list<string>
      */
     public const FIELDS = [
-        'workplace',
         'education',
-        'location',
-        'hometown',
-        'website',
-        'birthday',
-        'gender',
-        'relationship_status',
     ];
 
     /**
      * @var array<string, string>
      */
     public const LABELS = [
-        'workplace' => 'Works at',
         'education' => 'Studied at',
-        'location' => 'Lives in',
-        'hometown' => 'From',
-        'website' => 'Website',
-        'birthday' => 'Birthday',
-        'gender' => 'Gender',
-        'relationship_status' => 'Relationship',
     ];
 
     /**
      * @var array<string, ProfileFieldVisibility>
      */
     public const DEFAULT_VISIBILITY = [
-        'workplace' => ProfileFieldVisibility::Public,
         'education' => ProfileFieldVisibility::Public,
-        'location' => ProfileFieldVisibility::Public,
-        'hometown' => ProfileFieldVisibility::Public,
-        'website' => ProfileFieldVisibility::Public,
-        'birthday' => ProfileFieldVisibility::OnlyMe,
-        'gender' => ProfileFieldVisibility::OnlyMe,
-        'relationship_status' => ProfileFieldVisibility::Public,
     ];
 
     /**
@@ -64,6 +44,10 @@ class ProfileAboutPresenter
         $isOwn = $viewer->id === $profile->id;
         $isMutual = ! $isOwn && $viewer->isMutualWith($profile);
         $privacy = $this->resolvedPrivacy($profile);
+
+        if (! $isOwn && $profile->isChild()) {
+            return [];
+        }
 
         $fields = [];
 
@@ -225,7 +209,8 @@ class ProfileAboutPresenter
         return PostMedia::query()
             ->where('status', PostMedia::STATUS_READY)
             ->whereHas('post', function ($query) use ($profile) {
-                $query->where('user_id', $profile->id);
+                $query->where('user_id', $profile->id)
+                    ->where('moderation_status', PostModerationStatus::Approved);
             })
             ->orderByDesc('id');
     }

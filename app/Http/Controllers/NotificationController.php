@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\UnreadBadgeBroadcaster;
 use App\Support\NotificationPresenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ class NotificationController extends Controller
             ->keyBy('id');
 
         $request->user()->unreadNotifications->markAsRead();
+        app(UnreadBadgeBroadcaster::class)->publish($request->user());
 
         return Inertia::render('notifications/index', [
             'notifications' => $paginator->through(
@@ -38,6 +40,7 @@ class NotificationController extends Controller
             ->firstOrFail();
 
         $notification->markAsRead();
+        app(UnreadBadgeBroadcaster::class)->publish($request->user());
 
         return back();
     }
@@ -45,6 +48,7 @@ class NotificationController extends Controller
     public function markAllAsRead(Request $request): RedirectResponse
     {
         $request->user()->unreadNotifications->markAsRead();
+        app(UnreadBadgeBroadcaster::class)->publish($request->user());
 
         return back();
     }

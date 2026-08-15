@@ -134,6 +134,9 @@ class NotificationPresenter
             'user_followed' => __('started following you'),
             'user_mentioned' => __('mentioned you'),
             'post_shared' => __('shared your post'),
+            'post_moderated' => ($data['status'] ?? null) === 'rejected'
+                ? __('rejected your post')
+                : __('approved your post'),
             default => $message ?? __('New notification'),
         };
     }

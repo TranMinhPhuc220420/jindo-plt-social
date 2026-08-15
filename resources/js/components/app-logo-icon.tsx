@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 export default function AppLogoIcon({
     className,
-    alt = 'PLT Social',
+    alt = 'PLT Học Bá',
     ...props
 }: ImgHTMLAttributes<HTMLImageElement>) {
     return (

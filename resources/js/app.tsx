@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import echo from '@/echo';
 import { initializeTheme } from '@/hooks/use-appearance';
+import AdminLayout from '@/layouts/admin-layout';
 import AppMessagesLayout from '@/layouts/app/app-messages-layout';
 import AppProfileLayout from '@/layouts/app/app-profile-layout';
 import AppSettingsLayout from '@/layouts/app/app-settings-layout';
@@ -13,7 +14,7 @@ import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { isFirebaseConfigured } from '@/lib/firebase';
 
-const appName = import.meta.env.VITE_APP_NAME || 'PLT Social';
+const appName = import.meta.env.VITE_APP_NAME || 'PLT Học Bá';
 
 // So broadcast()->toOthers() can exclude this tab on Inertia form visits (Reverb only).
 router.on('before', (event) => {
@@ -33,6 +34,7 @@ createInertiaApp({
     layout: (name) => {
         switch (true) {
             case name === 'welcome':
+            case name.startsWith('legal/'):
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;
@@ -42,6 +44,8 @@ createInertiaApp({
                 return [UnreadBadgesLayout, AppMessagesLayout];
             case name.startsWith('profile/'):
                 return [UnreadBadgesLayout, AppProfileLayout];
+            case name.startsWith('admin/'):
+                return AdminLayout;
             default:
                 return [UnreadBadgesLayout, AppLayout];
         }

@@ -1,6 +1,6 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ConversationInbox } from '@/components/messages/conversation-inbox';
 import { MessageComposer } from '@/components/messages/message-composer';
 import { MessageThread } from '@/components/messages/message-thread';
@@ -8,90 +8,54 @@ import { TypingIndicator } from '@/components/messages/typing-indicator';
 import { useUnreadBadges } from '@/components/notifications/unread-badges-provider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useConversationRealtime } from '@/hooks/use-conversation-realtime';
+import { useInbox } from '@/hooks/use-inbox';
 import { useInitials } from '@/hooks/use-initials';
 import { useVisualViewportBottomInset } from '@/hooks/use-visual-viewport';
+import { markConversationRead } from '@/lib/realtime';
 import { cn } from '@/lib/utils';
-import type {
-    Auth,
-    ChatMessage,
-    ConversationSummary,
-    MessageUser,
-} from '@/types';
+import type { Auth, ChatMessage, MessageUser } from '@/types';
 
 type Props = {
     conversation: {
-        id: number;
+        id: string;
         other_user: MessageUser | null;
     };
-    messages: ChatMessage[];
-    conversations?: ConversationSummary[];
+    messages?: ChatMessage[];
 };
 
 type PageProps = {
     auth: Auth;
 };
 
-function snippetFor(message: ChatMessage): string {
-    if (message.body?.trim()) {
-        return message.body;
+function isSameMessage(a: ChatMessage, b: ChatMessage): boolean {
+    if (a.client_id && b.client_id && a.client_id === b.client_id) {
+        return true;
     }
 
-    if (message.shared_post) {
-        return 'Shared a post';
-    }
-
-    if (message.image_url) {
-        return 'Photo';
-    }
-
-    return '';
+    return a.id === b.id;
 }
 
-type InboxPreview = {
-    body: string | null;
-    created_at: string | null;
-    unread_count?: number;
-};
+function messageAt(message: ChatMessage): number {
+    if (typeof message.at === 'number') {
+        return message.at;
+    }
 
-function sortByLastMessage(
-    items: ConversationSummary[],
-): ConversationSummary[] {
-    return [...items].sort((a, b) => {
-        const aTime = a.last_message?.created_at
-            ? new Date(a.last_message.created_at).getTime()
-            : 0;
-        const bTime = b.last_message?.created_at
-            ? new Date(b.last_message.created_at).getTime()
-            : 0;
-
-        return bTime - aTime;
-    });
+    return message.created_at ? new Date(message.created_at).getTime() : 0;
 }
 
-export default function MessagesShow({
-    conversation,
-    messages: initialMessages,
-    conversations: initialConversations = [],
-}: Props) {
+export default function MessagesShow({ conversation }: Props) {
     const getInitials = useInitials();
     const keyboardInset = useVisualViewportBottomInset();
     const { auth } = usePage<PageProps>().props;
-    const { setMessages, setActiveConversation } = useUnreadBadges();
+    const inbox = useInbox();
+    const conversations = inbox.conversations;
+    const { setActiveConversation } = useUnreadBadges();
     const [liveMessages, setLiveMessages] = useState<ChatMessage[]>([]);
-    const [previewById, setPreviewById] = useState<
-        Record<number, InboxPreview>
-    >({});
+    const [peerReadAt, setPeerReadAt] = useState<number | null>(null);
     const [scrollToken, setScrollToken] = useState(0);
     const [activeConversationId, setActiveConversationId] = useState(
         conversation.id,
     );
-
-    // Thread open marks DMs read server-side — pin the shared badge to that count
-    // and drop any prefetched pages that still carry a stale unread total.
-    useEffect(() => {
-        setMessages(auth.unread_messages_count ?? 0);
-        router.flushAll();
-    }, [conversation.id, auth.unread_messages_count, setMessages]);
 
     useEffect(() => {
         setActiveConversation(conversation.id);
@@ -101,128 +65,63 @@ export default function MessagesShow({
         };
     }, [conversation.id, setActiveConversation]);
 
+    useEffect(() => {
+        if (!auth.user?.id) {
+            return;
+        }
+
+        void markConversationRead(conversation.id, auth.user.id);
+    }, [conversation.id, auth.user?.id]);
+
     if (activeConversationId !== conversation.id) {
         setActiveConversationId(conversation.id);
         setLiveMessages([]);
-        setPreviewById({});
+        setPeerReadAt(null);
     }
 
-    const inbox = useMemo(() => {
-        const merged = initialConversations.map((item) => {
-            const override = previewById[item.id];
-
-            if (!override) {
-                return item;
-            }
-
-            const propTime = item.last_message?.created_at
-                ? new Date(item.last_message.created_at).getTime()
-                : 0;
-            const overrideTime = override.created_at
-                ? new Date(override.created_at).getTime()
-                : 0;
-
-            if (propTime >= overrideTime) {
-                return item;
-            }
-
+    const messages = liveMessages.map((message) => {
+        if (
+            message.is_mine &&
+            peerReadAt !== null &&
+            messageAt(message) <= peerReadAt
+        ) {
             return {
-                ...item,
-                last_message: {
-                    body: override.body,
-                    created_at: override.created_at,
-                },
-                unread_count: override.unread_count ?? item.unread_count ?? 0,
+                ...message,
+                read_at: new Date(peerReadAt).toISOString(),
             };
-        });
+        }
 
-        return sortByLastMessage(merged);
-    }, [initialConversations, previewById]);
-
-    const messages = [...initialMessages, ...liveMessages].filter(
-        (message, index, all) =>
-            all.findIndex((item) => item.id === message.id) === index,
-    );
+        return message;
+    });
 
     const appendOrReplaceLive = (
         next: ChatMessage,
-        replaceClientId?: number,
+        replaceClientId?: string,
     ) => {
         setLiveMessages((current) => {
-            const withoutDup = current.filter(
-                (item) =>
-                    item.id !== next.id &&
-                    (replaceClientId === undefined ||
-                        item.id !== replaceClientId),
-            );
+            const matches = (item: ChatMessage) =>
+                isSameMessage(item, next) ||
+                (replaceClientId !== undefined &&
+                    (item.id === replaceClientId ||
+                        item.client_id === replaceClientId));
 
-            if (
-                initialMessages.some((item) => item.id === next.id) &&
-                replaceClientId === undefined
-            ) {
-                return withoutDup;
+            const index = current.findIndex(matches);
+
+            if (index === -1) {
+                return [...current, next];
             }
 
-            return [...withoutDup, next];
-        });
-    };
-
-    const bumpInboxPreview = (
-        conversationId: number,
-        body: string | null,
-        createdAt: string | null,
-        unreadIncrement = false,
-    ) => {
-        setPreviewById((current) => {
-            const existing = current[conversationId];
-            const baseUnread =
-                existing?.unread_count ??
-                initialConversations.find((item) => item.id === conversationId)
-                    ?.unread_count ??
-                0;
-
-            return {
-                ...current,
-                [conversationId]: {
-                    body,
-                    created_at: createdAt,
-                    unread_count: unreadIncrement ? baseUnread + 1 : 0,
-                },
-            };
-        });
-    };
-
-    const markThreadRead = () => {
-        const token = document.cookie
-            .split('; ')
-            .find((row) => row.startsWith('XSRF-TOKEN='))
-            ?.split('=')[1];
-
-        void fetch(`/messages/${conversation.id}/read`, {
-            method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                ...(token ? { 'X-XSRF-TOKEN': decodeURIComponent(token) } : {}),
-            },
-            credentials: 'same-origin',
-        })
-            .then(async (response) => {
-                if (!response.ok) {
-                    return;
+            // Update in place so a confirmation never re-orders the thread.
+            return current.reduce<ChatMessage[]>((acc, item, at) => {
+                if (at === index) {
+                    acc.push(next);
+                } else if (!matches(item)) {
+                    acc.push(item);
                 }
 
-                const data = (await response.json()) as {
-                    unread_messages_count?: number;
-                };
-
-                if (typeof data.unread_messages_count === 'number') {
-                    setMessages(data.unread_messages_count);
-                }
-            })
-            .catch(() => {
-                // Reverb/mark-read is best-effort while viewing the thread.
-            });
+                return acc;
+            }, []);
+        });
     };
 
     const { typingPeer, setLocalTyping } = useConversationRealtime(
@@ -237,25 +136,25 @@ export default function MessagesShow({
             onMessage: (payload) => {
                 const mine = payload.user.id === auth.user?.id;
 
-                // Own sends are handled via optimistic + JSON confirm.
-                if (mine) {
-                    return;
-                }
-
                 appendOrReplaceLive({
                     ...payload,
-                    is_mine: false,
-                    read_at: new Date().toISOString(),
+                    is_mine: mine,
                 });
 
-                bumpInboxPreview(
-                    conversation.id,
-                    snippetFor(payload) || null,
-                    payload.created_at,
-                    false,
+                if (!mine && auth.user?.id) {
+                    void markConversationRead(conversation.id, auth.user.id);
+                }
+            },
+            onMessageRemoved: (clientId) => {
+                setLiveMessages((current) =>
+                    current.filter(
+                        (item) =>
+                            item.client_id !== clientId && item.id !== clientId,
+                    ),
                 );
-
-                markThreadRead();
+            },
+            onPeerRead: (at) => {
+                setPeerReadAt(at);
             },
         },
     );
@@ -283,7 +182,8 @@ export default function MessagesShow({
             >
                 <aside className="hidden w-80 shrink-0 flex-col border-r md:flex">
                     <ConversationInbox
-                        conversations={inbox}
+                        conversations={conversations}
+                        loading={inbox.loading}
                         activeId={conversation.id}
                     />
                 </aside>
@@ -342,44 +242,39 @@ export default function MessagesShow({
                         scrollToken={scrollToken}
                         typingName={typingPeer?.name ?? null}
                     />
-                    <MessageComposer
-                        conversationId={conversation.id}
-                        self={{
-                            id: auth.user!.id,
-                            name: auth.user!.name,
-                            username: auth.user!.username,
-                            avatar: auth.user!.avatar ?? null,
-                        }}
-                        onTypingChange={setLocalTyping}
-                        onOptimistic={(message) => {
-                            appendOrReplaceLive(message);
-                            bumpInboxPreview(
-                                conversation.id,
-                                snippetFor(message) || null,
-                                message.created_at,
-                                false,
-                            );
-                        }}
-                        onConfirmed={(message, clientId) => {
-                            appendOrReplaceLive(message, clientId);
-                            bumpInboxPreview(
-                                conversation.id,
-                                snippetFor(message) || null,
-                                message.created_at,
-                                false,
-                            );
-                            setScrollToken((n) => n + 1);
-                        }}
-                        onFailed={(clientId) => {
-                            setLiveMessages((current) =>
-                                current.filter((item) => item.id !== clientId),
-                            );
-                        }}
-                        onSent={() => {
-                            setLocalTyping(false);
-                            setScrollToken((n) => n + 1);
-                        }}
-                    />
+                    {conversation.other_user && auth.user ? (
+                        <MessageComposer
+                            conversationId={conversation.id}
+                            otherUser={conversation.other_user}
+                            self={{
+                                id: auth.user.id,
+                                name: auth.user.name,
+                                username: auth.user.username,
+                                avatar: auth.user.avatar ?? null,
+                            }}
+                            onTypingChange={setLocalTyping}
+                            onOptimistic={(message) => {
+                                appendOrReplaceLive(message);
+                            }}
+                            onConfirmed={(message, clientId) => {
+                                appendOrReplaceLive(message, clientId);
+                                setScrollToken((n) => n + 1);
+                            }}
+                            onFailed={(clientId) => {
+                                setLiveMessages((current) =>
+                                    current.filter(
+                                        (item) =>
+                                            item.id !== clientId &&
+                                            item.client_id !== clientId,
+                                    ),
+                                );
+                            }}
+                            onSent={() => {
+                                setLocalTyping(false);
+                                setScrollToken((n) => n + 1);
+                            }}
+                        />
+                    ) : null}
                 </div>
             </div>
         </>

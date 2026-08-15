@@ -6,6 +6,7 @@ use App\Enums\ReactionType;
 use App\Models\Like;
 use App\Models\Post;
 use App\Models\PostMedia;
+use App\Models\Report;
 use App\Models\User;
 
 class PostPresenter
@@ -46,6 +47,8 @@ class PostPresenter
             'liked_by_viewer' => $viewerReaction !== null,
             'bookmarked_by_viewer' => (bool) ($post->bookmarked_by_viewer ?? false),
             'shared_post' => self::sharedPostPayload($post),
+            'moderation_status' => $post->moderation_status->value,
+            'moderation_reason' => $post->moderation_reason,
             'user' => [
                 'id' => $post->user->id,
                 'name' => $post->user->name,
@@ -58,6 +61,7 @@ class PostPresenter
             'can' => [
                 'update' => $viewer->can('update', $post),
                 'delete' => $viewer->can('delete', $post),
+                'report' => $viewer->can('create', [Report::class, $post]),
             ],
         ];
     }
@@ -87,7 +91,7 @@ class PostPresenter
      */
     public static function embedSharedPost(?Post $root, int $sharedPostId): array
     {
-        if ($root === null || $root->trashed()) {
+        if ($root === null || $root->trashed() || ! $root->isApproved()) {
             return [
                 'id' => $sharedPostId,
                 'body' => '',

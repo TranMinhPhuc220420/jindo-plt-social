@@ -53,15 +53,15 @@ test('profile lists followers and following', function () {
 test('about privacy hides fields from strangers and shows mutual fields to mutuals', function () {
     $owner = User::factory()->create([
         'username' => 'alice',
+        'education' => 'State U',
         'workplace' => 'PLT Labs',
         'location' => 'Hanoi',
         'birthday' => '1995-05-15',
         'gender' => 'Woman',
         'profile_privacy' => [
+            'education' => ProfileFieldVisibility::Public->value,
             'workplace' => ProfileFieldVisibility::Public->value,
             'location' => ProfileFieldVisibility::Mutual->value,
-            'birthday' => ProfileFieldVisibility::OnlyMe->value,
-            'gender' => ProfileFieldVisibility::OnlyMe->value,
         ],
     ]);
 
@@ -76,27 +76,40 @@ test('about privacy hides fields from strangers and shows mutual fields to mutua
         ->assertInertia(fn ($page) => $page
             ->component('profile/about')
             ->has('about', 1)
-            ->where('about.0.key', 'workplace')
-            ->where('about.0.value', 'PLT Labs')
+            ->where('about.0.key', 'education')
+            ->where('about.0.value', 'State U')
         );
 
     $this->actingAs($mutual)
         ->get(route('profile.about', 'alice'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('profile/about')
-            ->has('about', 2)
-            ->where('about.0.key', 'workplace')
-            ->where('about.1.key', 'location')
-            ->where('about.1.value', 'Hanoi')
+            ->has('about', 1)
+            ->where('about.0.key', 'education')
         );
 
     $this->actingAs($owner)
         ->get(route('profile.about', 'alice'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('profile/about')
-            ->has('about', 4)
+            ->has('about', 1)
+            ->where('about.0.key', 'education')
+        );
+});
+
+test('child profiles hide about from strangers', function () {
+    $owner = User::factory()->create([
+        'username' => 'kid',
+        'education' => 'Grade 7',
+        'birthday' => now()->subYears(12)->toDateString(),
+    ]);
+    $stranger = User::factory()->create();
+
+    $this->actingAs($stranger)
+        ->get(route('profile.about', 'kid'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('about', 0)
         );
 });
 
@@ -109,23 +122,10 @@ test('owner can update about fields and privacy', function () {
             'username' => $user->username,
             'email' => $user->email,
             'bio' => $user->bio,
-            'workplace' => 'Acme Co',
             'education' => 'State U',
-            'location' => 'Da Nang',
-            'hometown' => 'Hue',
-            'website' => 'https://example.com',
-            'birthday' => '1990-01-02',
-            'gender' => 'Man',
-            'relationship_status' => 'Single',
+            'workplace' => 'Should Ignore',
             'profile_privacy' => [
-                'workplace' => 'public',
-                'education' => 'public',
-                'location' => 'mutual',
-                'hometown' => 'public',
-                'website' => 'public',
-                'birthday' => 'only_me',
-                'gender' => 'only_me',
-                'relationship_status' => 'mutual',
+                'education' => 'mutual',
             ],
         ])
         ->assertSessionHasNoErrors()
@@ -133,13 +133,9 @@ test('owner can update about fields and privacy', function () {
 
     $user->refresh();
 
-    expect($user->workplace)->toBe('Acme Co')
-        ->and($user->education)->toBe('State U')
-        ->and($user->location)->toBe('Da Nang')
-        ->and($user->website)->toBe('https://example.com')
-        ->and($user->birthday?->format('Y-m-d'))->toBe('1990-01-02')
-        ->and($user->profile_privacy['location'])->toBe('mutual')
-        ->and($user->profile_privacy['birthday'])->toBe('only_me');
+    expect($user->education)->toBe('State U')
+        ->and($user->workplace)->not->toBe('Should Ignore')
+        ->and($user->profile_privacy['education'])->toBe('mutual');
 });
 
 test('photos tab lists ready post media', function () {

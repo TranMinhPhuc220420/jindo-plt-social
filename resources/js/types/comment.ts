@@ -12,5 +12,6 @@ export type Comment = {
     parent_id: number | null;
     user: CommentAuthor;
     can_delete: boolean;
+    can_report: boolean;
     replies: Comment[];
 };

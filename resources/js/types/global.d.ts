@@ -11,8 +11,14 @@ declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
             name: string;
+            tagline: string;
+            subtitle: string;
             auth: Auth;
+            canRegister: boolean;
             sidebarOpen: boolean;
+            realtime?: {
+                driver?: string | null;
+            };
             [key: string]: unknown;
         };
     }

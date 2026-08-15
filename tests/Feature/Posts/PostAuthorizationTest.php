@@ -15,6 +15,7 @@ test('users can create a post', function () {
     $this->assertDatabaseHas('posts', [
         'user_id' => $user->id,
         'body' => 'Hello world from the social feed',
+        'moderation_status' => 'pending',
     ]);
 });
 

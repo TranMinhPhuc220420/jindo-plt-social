@@ -1,8 +1,8 @@
-# Operator runbook — PLT Social (cPanel)
+# Operator runbook — PLT Học Bá (cPanel)
 
 Deploy and operate production **without reading Laravel source**. CI builds a release zip and uploads it via FTPS; you extract and finish setup in cPanel.
 
-**Product:** PLT Social (`jindo-plt-social`)  
+**Product:** PLT Học Bá (`jindo-plt-social`)  
 **Hosting:** cPanel shared (PHP 8.4 / `ea-php84`)
 
 ---
@@ -58,6 +58,17 @@ git push origin main
 3. Follow §2 (first deploy) or §3 (update).
 
 CI already includes `vendor/` (Composer `--no-dev`) and `public/build/` (Vite). Do **not** run `npm install` on the server.
+
+### Local demo seed
+
+`php artisan migrate:fresh --seed` (local only; needs network once to download post images). Password for seeded accounts is `password`.
+
+| Login | Name | Role |
+|-------|------|------|
+| `test@example.com` (`testuser`) | Trần Minh Khoa | intern |
+| `admin@example.com` (`admin`) | Nguyễn Thị Lan | admin |
+
+Do **not** run `db:seed` on production (see §2.6).
 
 ---
 
@@ -162,8 +173,8 @@ Permissions: `storage/` and `bootstrap/cache/` must be writable by the web user.
 | Queue | `QUEUE_CONNECTION=database` | Same; required for `ProcessPostMediaJob` |
 | Worker | Cron or Terminal `queue:work` | No Supervisor → prefer Cron below |
 | Horizon | **Off** | Needs Redis + long process |
-| Broadcast | `BROADCAST_CONNECTION=firebase` | Reverb needs a persistent WebSocket process; Firebase RTDB is the event bus |
-| Realtime UX | Firebase RTDB listeners | MySQL remains source of truth — see [realtime-inventory.md](./architecture/realtime-inventory.md) |
+| Broadcast | `BROADCAST_CONNECTION=firebase` | Reverb needs a persistent WebSocket process; Firebase RTDB is the live layer |
+| Realtime UX | Firebase RTDB listeners | DMs are durable on RTDB [ADR 0020](./decisions/0020-firebase-durable-dms.md); notification badges: event bus [ADR 0014](./decisions/0014-firebase-realtime-event-bus.md) |
 
 ### Firebase checklist (one-time + every env change)
 
@@ -178,12 +189,12 @@ Permissions: `storage/` and `bootstrap/cache/` must be writable by the web user.
    FIREBASE_PROJECT_ID=YOUR_PROJECT
    ```
 
-4. CI / Vite build must include `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_DATABASE_URL`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` so `public/build` can sign in and listen.
-5. **Members map:** Security Rules require `realtime/conversations/{id}/members/{userId}: true` for both participants. Opening a DM or sending a message syncs this automatically. If peer chat does not update live, check the RTDB console for that path (and browser console for `permission_denied`).
-6. Smoke: two browsers — send DM (sender optimistic; peer gets Firebase event), typing indicator, like a post (bell +1), open thread (badge decreases).
-7. If Firebase is unavailable, HTTP still succeeds (fail-soft); UI may need refresh.
+4. CI / Vite build must include `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_DATABASE_URL`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` so `public/build` can sign in and listen. `VITE_FIREBASE_DATABASE_URL` is required (not optional). Client only subscribes to Firebase when the server `.env` has `BROADCAST_CONNECTION=firebase` (shared as Inertia `realtime.driver`).
+5. **Members map:** Security Rules require `realtime/conversations/{minUid}_{maxUid}/members/{userId}: true` for both participants. `POST /messages/ensure` syncs this (Admin SDK). Members write `messages/{pushId}` + `last_message` + inbox from the **browser**. Deploy rules after Phase 40 (string `cid`, inbox, `read/{uid}`). If peer chat does not update live, check the RTDB console (and `permission_denied`).
+6. Smoke: two browsers — send a **text** DM (no `POST /messages/{id}/messages`; peer bubble from RTDB), send a photo (`POST /messages/media` then RTDB), typing, like a post (bell +1), open thread (inbox unread → 0, badge decreases).
+7. Chat **requires** `VITE_FIREBASE_*` in the Vite build even for local Reverb notification testing. Without it, inbox/thread stay empty.
 
-Capability list (add/remove realtime features here): [architecture/realtime-inventory.md](./architecture/realtime-inventory.md). ADR: [decisions/0014-firebase-realtime-event-bus.md](./decisions/0014-firebase-realtime-event-bus.md).
+Capability list (add/remove realtime features here): [architecture/realtime-inventory.md](./architecture/realtime-inventory.md). ADRs: [0014](./decisions/0014-firebase-realtime-event-bus.md), [0020](./decisions/0020-firebase-durable-dms.md).
 
 **Cron (recommended on shared):** every minute:
 
@@ -225,7 +236,7 @@ After uploads, count should return toward `0` if the worker is healthy.
 | Login as admin | Dashboard / admin gates work |
 | Create a post **with image** | Job leaves `jobs` table; image visible (needs queue worker + `storage:link`) |
 | Avatar / cover upload | Same as media |
-| Live DM (2 sessions) | Sender: optimistic bubble immediately; receiver: Firebase without full page reload |
+| Live DM (2 sessions) | Sender: optimistic bubble immediately; **text** receiver: RTDB in &lt;1s; Network tab has **no** `POST /messages/{id}/messages` |
 | Notification bell | Like/follow bumps badge live when Firebase configured |
 | `APP_DEBUG=false` | No stack traces to public users |
 | Wrong FTP path | Fixed if site 404 after extract — confirm extract path vs subdomain docroot |

@@ -11,7 +11,9 @@ use App\Services\ConversationService;
 use App\Services\FeedService;
 use App\Services\HashtagService;
 use App\Services\MentionService;
-use App\Services\Messaging\MessageBroadcaster;
+use App\Services\PostModerationService;
+use App\Support\PostPresenter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use InvalidArgumentException;
@@ -23,76 +25,111 @@ class PostShareController extends Controller
         private readonly MentionService $mentions,
         private readonly HashtagService $hashtags,
         private readonly ConversationService $conversations,
-        private readonly MessageBroadcaster $messageBroadcaster,
+        private readonly PostModerationService $moderation,
     ) {}
 
     public function store(StoreSharePostRequest $request, Post $post): RedirectResponse
     {
+        $this->authorize('engage', $post);
+
         $root = Post::shareRoot($post);
 
         if ($root->trashed()) {
             abort(404);
         }
 
+        $this->authorize('engage', $root);
+
         $validated = $request->validated();
         $body = is_string($validated['body'] ?? null) ? $validated['body'] : '';
+        $actor = $request->user();
 
-        $share = $request->user()->posts()->create([
+        $share = $actor->posts()->create([
             'body' => $body,
             'shared_post_id' => $root->id,
+            ...$this->moderation->attributesForWriter($actor),
         ]);
 
         if ($body !== '') {
-            $this->mentions->syncFor($share, $request->user(), $body);
+            $this->mentions->syncFor($share, $actor, $body);
             $this->hashtags->syncFor($share, $body);
         }
 
-        $this->feedService->forgetAuthorCache($request->user()->id);
+        $this->feedService->forgetAuthorCache($actor->id);
 
         $root->loadMissing('user');
 
-        if ($root->user->id !== $request->user()->id) {
-            $root->user->notify(new PostSharedNotification($request->user(), $share, $root));
+        if ($share->isApproved() && $root->user->id !== $actor->id) {
+            $root->user->notify(new PostSharedNotification($actor, $share, $root));
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Post shared.')]);
+        $message = $share->isApproved()
+            ? __('Post shared.')
+            : __('Share submitted for review.');
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
 
         return to_route('feed');
     }
 
-    public function storeMessage(SharePostMessageRequest $request, Post $post): RedirectResponse
+    public function storeMessage(SharePostMessageRequest $request, Post $post): RedirectResponse|JsonResponse
     {
+        $this->authorize('engage', $post);
+
         $root = Post::shareRoot($post);
 
         if ($root->trashed()) {
             abort(404);
         }
 
+        $this->authorize('engage', $root);
+
+        $root->loadMissing(['user', 'media']);
+
         $body = $request->validated('body');
         $body = is_string($body) ? $body : null;
         $actor = $request->user();
+        $sent = [];
 
         foreach ($request->validated('usernames') as $username) {
             $target = User::query()->where('username', $username)->firstOrFail();
 
             try {
-                $conversation = $this->conversations->findOrCreateBetween($actor, $target);
+                $conversationId = $this->conversations->ensureBetween($actor, $target);
             } catch (InvalidArgumentException) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => __('You can only message mutual followers.'),
+                    ], 422);
+                }
+
                 return back()->withErrors([
                     'usernames' => __('You can only message mutual followers.'),
                 ]);
             }
 
-            $message = $conversation->messages()->create([
-                'user_id' => $actor->id,
+            $sent[] = [
+                'id' => $conversationId,
+                'other_user' => [
+                    'id' => $target->id,
+                    'name' => $target->name,
+                    'username' => $target->username,
+                    'avatar' => $target->avatarUrl(),
+                ],
                 'body' => $body !== '' ? $body : null,
-                'shared_post_id' => $root->id,
-            ]);
+                'shared_post' => PostPresenter::embedSharedPost($root, $root->id),
+                'created_at' => now()->toIso8601String(),
+                'user' => [
+                    'id' => $actor->id,
+                    'name' => $actor->name,
+                    'username' => $actor->username,
+                    'avatar' => $actor->avatarUrl(),
+                ],
+            ];
+        }
 
-            $conversation->touch();
-
-            $this->messageBroadcaster->publishSent($message);
-            $this->messageBroadcaster->scheduleRecipientBadge($conversation, $actor);
+        if ($request->expectsJson()) {
+            return response()->json(['conversations' => $sent]);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Post sent.')]);

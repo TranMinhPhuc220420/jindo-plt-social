@@ -3,36 +3,26 @@
 use App\Models\User;
 use App\Services\ConversationService;
 use App\Services\Firebase\ConversationMemberSync;
-use App\Services\Messaging\MessageBroadcaster;
-use Illuminate\Support\Facades\Event;
+use App\Support\ConversationId;
 use Mockery;
 
 afterEach(function () {
     Mockery::close();
 });
 
-test('publishSent syncs conversation members before broadcasting', function () {
-    Event::fake();
-
+test('ensureBetween syncs member map with a string conversation id', function () {
     $a = User::factory()->create();
     $b = User::factory()->create();
     $a->following()->attach($b->id);
     $b->following()->attach($a->id);
 
-    $conversation = app(ConversationService::class)->findOrCreateBetween($a, $b);
-
-    $message = $conversation->messages()->create([
-        'user_id' => $a->id,
-        'body' => 'member sync on send',
-    ]);
+    $cid = ConversationId::between((int) $a->id, (int) $b->id);
 
     $memberSync = Mockery::mock(ConversationMemberSync::class);
-    $memberSync
-        ->shouldReceive('sync')
+    $memberSync->shouldReceive('syncPair')
         ->once()
-        ->withArgs(fn ($arg) => (int) $arg->id === (int) $conversation->id);
-
+        ->with($cid, $a->id, $b->id);
     $this->instance(ConversationMemberSync::class, $memberSync);
 
-    app(MessageBroadcaster::class)->publishSent($message->fresh(['conversation.participants']));
+    expect(app(ConversationService::class)->ensureBetween($a, $b))->toBe($cid);
 });

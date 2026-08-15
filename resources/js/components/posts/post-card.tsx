@@ -1,16 +1,24 @@
 import { Link, router } from '@inertiajs/react';
-import { MessageCircle, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import {
+    Flag,
+    MessageCircle,
+    MoreHorizontal,
+    Pencil,
+    Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import { BookmarkButton } from '@/components/posts/bookmark-button';
 import { LikeButton } from '@/components/posts/like-button';
 import { PostBody } from '@/components/posts/post-body';
 import { PostComposerShell } from '@/components/posts/post-composer-shell';
 import { LegacyPostImage, PostMedia } from '@/components/posts/post-media';
+import { ReportDialog } from '@/components/posts/report-dialog';
 import { ShareMenu } from '@/components/posts/share-menu';
 import { SharedPostEmbed } from '@/components/posts/shared-post-embed';
 import { FollowButton } from '@/components/profile/follow-button';
 import { ConfirmDialog } from '@/components/social/confirm-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -34,7 +42,10 @@ export function PostCard({ post, clampBody = true }: Props) {
     const [editSession, setEditSession] = useState(0);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [reporting, setReporting] = useState(false);
+    const showMenu = post.can.update || post.can.delete || post.can.report;
     const isShare = post.shared_post !== null;
+    const isLive = post.moderation_status === 'approved';
 
     function handleDelete(): void {
         setDeleting(true);
@@ -88,8 +99,10 @@ export function PostCard({ post, clampBody = true }: Props) {
                                 </>
                             ) : null}
                         </div>
-                        <div className="truncate text-xs text-muted-foreground">
-                            <span>@{post.user.username}</span>
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                            <span className="truncate">
+                                @{post.user.username}
+                            </span>
                             {post.created_at ? (
                                 <>
                                     <span className="mx-1">·</span>
@@ -98,16 +111,34 @@ export function PostCard({ post, clampBody = true }: Props) {
                                     </time>
                                 </>
                             ) : null}
+                            {post.moderation_status === 'pending' ? (
+                                <>
+                                    <span className="mx-1">·</span>
+                                    <Badge variant="secondary">
+                                        Pending review
+                                    </Badge>
+                                </>
+                            ) : null}
+                            {post.moderation_status === 'rejected' ? (
+                                <>
+                                    <span className="mx-1">·</span>
+                                    <Badge variant="destructive">
+                                        Rejected
+                                    </Badge>
+                                </>
+                            ) : null}
                         </div>
                     </div>
                     <div className="-mr-1.5 flex shrink-0 items-center">
-                        <BookmarkButton
-                            postId={post.id}
-                            bookmarked={post.bookmarked_by_viewer}
-                            bookmarksCount={post.bookmarks_count ?? 0}
-                            className="size-7 px-0"
-                        />
-                        {(post.can.update || post.can.delete) && (
+                        {isLive ? (
+                            <BookmarkButton
+                                postId={post.id}
+                                bookmarked={post.bookmarked_by_viewer}
+                                bookmarksCount={post.bookmarks_count ?? 0}
+                                className="size-7 px-0"
+                            />
+                        ) : null}
+                        {showMenu ? (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button
@@ -136,6 +167,14 @@ export function PostCard({ post, clampBody = true }: Props) {
                                             Edit
                                         </DropdownMenuItem>
                                     ) : null}
+                                    {post.can.report ? (
+                                        <DropdownMenuItem
+                                            onSelect={() => setReporting(true)}
+                                        >
+                                            <Flag className="size-4" />
+                                            Report
+                                        </DropdownMenuItem>
+                                    ) : null}
                                     {post.can.delete ? (
                                         <DropdownMenuItem
                                             className="text-destructive focus:text-destructive"
@@ -149,10 +188,16 @@ export function PostCard({ post, clampBody = true }: Props) {
                                     ) : null}
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                        )}
+                        ) : null}
                     </div>
                 </div>
             </div>
+
+            {post.moderation_status === 'rejected' && post.moderation_reason ? (
+                <p className="px-3 pt-1 text-sm text-destructive">
+                    {post.moderation_reason}
+                </p>
+            ) : null}
 
             {post.body ? (
                 <div className="px-3">
@@ -175,35 +220,46 @@ export function PostCard({ post, clampBody = true }: Props) {
                 />
             ) : null}
 
-            <div className="flex items-center gap-0.5 px-2 py-0.5">
-                <LikeButton
-                    postId={post.id}
-                    viewerReaction={post.viewer_reaction}
-                    likesCount={post.likes_count}
-                    reactionCounts={post.reaction_counts}
-                    showCount
-                    compact
-                />
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 gap-1 px-2 text-muted-foreground"
-                    asChild
-                >
+            {isLive ? (
+                <div className="flex items-center gap-0.5 px-2 py-0.5">
+                    <LikeButton
+                        postId={post.id}
+                        viewerReaction={post.viewer_reaction}
+                        likesCount={post.likes_count}
+                        reactionCounts={post.reaction_counts}
+                        showCount
+                        compact
+                    />
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1 px-2 text-muted-foreground"
+                        asChild
+                    >
+                        <Link
+                            href={`/posts/${post.id}`}
+                            aria-label={`Comments, ${post.comments_count} total`}
+                        >
+                            <MessageCircle className="size-4 shrink-0" />
+                            {post.comments_count > 0 ? (
+                                <span className="tabular-nums">
+                                    ({post.comments_count})
+                                </span>
+                            ) : null}
+                        </Link>
+                    </Button>
+                    <ShareMenu post={post} showCount compact />
+                </div>
+            ) : (
+                <div className="px-3 pb-2.5">
                     <Link
                         href={`/posts/${post.id}`}
-                        aria-label={`Comments, ${post.comments_count} total`}
+                        className="text-xs text-muted-foreground hover:underline"
                     >
-                        <MessageCircle className="size-4 shrink-0" />
-                        {post.comments_count > 0 ? (
-                            <span className="tabular-nums">
-                                ({post.comments_count})
-                            </span>
-                        ) : null}
+                        View post
                     </Link>
-                </Button>
-                <ShareMenu post={post} showCount compact />
-            </div>
+                </div>
+            )}
 
             {post.can.update ? (
                 <PostComposerShell
@@ -229,6 +285,15 @@ export function PostCard({ post, clampBody = true }: Props) {
                 processing={deleting}
                 onConfirm={handleDelete}
             />
+
+            {post.can.report ? (
+                <ReportDialog
+                    open={reporting}
+                    onOpenChange={setReporting}
+                    reportableType="post"
+                    reportableId={post.id}
+                />
+            ) : null}
         </article>
     );
 }

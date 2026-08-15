@@ -11,15 +11,37 @@
             "notification": {
               ".write": false
             }
+          },
+          "inbox": {
+            "$cid": {
+              ".write": "auth != null && $cid.matches(/^[0-9]+_[0-9]+$/) && (auth.uid === $uid || (root.child('realtime/conversations/' + $cid + '/members/' + auth.uid).val() === true && root.child('realtime/conversations/' + $cid + '/members/' + $uid).val() === true && ($cid.beginsWith(auth.uid + '_') || $cid.endsWith('_' + auth.uid)) && ($cid.beginsWith($uid + '_') || $cid.endsWith('_' + $uid))))",
+              ".validate": "!newData.exists() || (newData.hasChild('unread') && newData.child('unread').isNumber() && newData.child('unread').val() >= 0)"
+            }
           }
         }
       },
       "conversations": {
         "$cid": {
-          ".read": "auth != null && root.child('realtime/conversations/' + $cid + '/members/' + auth.uid).val() === true",
+          ".read": "auth != null && $cid.matches(/^[0-9]+_[0-9]+$/) && ($cid.beginsWith(auth.uid + '_') || $cid.endsWith('_' + auth.uid)) && root.child('realtime/conversations/' + $cid + '/members/' + auth.uid).val() === true",
           "members": {
             "$memberId": {
               ".write": false
+            }
+          },
+          "messages": {
+            "$mid": {
+              ".write": "auth != null && $cid.matches(/^[0-9]+_[0-9]+$/) && root.child('realtime/conversations/' + $cid + '/members/' + auth.uid).val() === true && ((newData.exists() && newData.child('user/id').val() == auth.uid && (!data.exists() || data.child('user/id').val() == auth.uid)) || (!newData.exists() && data.exists() && data.child('user/id').val() == auth.uid))",
+              ".validate": "newData.hasChildren(['client_id', 'conversation_id', 'created_at', 'at', 'user']) && newData.child('client_id').val() === $mid && newData.child('conversation_id').val() === $cid && newData.child('at').isNumber() && newData.child('user/id').val() == auth.uid && !newData.hasChild('mysql_id') && (!newData.hasChild('body') || newData.child('body').val() === null || (newData.child('body').isString() && newData.child('body').val().length <= 2000))"
+            }
+          },
+          "last_message": {
+            ".write": "auth != null && root.child('realtime/conversations/' + $cid + '/members/' + auth.uid).val() === true && newData.exists() && newData.child('sender_id').val() == auth.uid",
+            ".validate": "newData.hasChildren(['created_at', 'sender_id']) && newData.child('created_at').isString() && (!newData.hasChild('body') || newData.child('body').val() === null || newData.child('body').isString())"
+          },
+          "read": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && root.child('realtime/conversations/' + $cid + '/members/' + auth.uid).val() === true",
+              ".validate": "newData.hasChildren(['at']) && newData.child('at').isNumber()"
             }
           },
           "events": {

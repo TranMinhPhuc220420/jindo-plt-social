@@ -44,11 +44,12 @@ class SearchService
 
         if ($query === '') {
             return $this->feedService->engagementQuery($viewer)
+                ->approved()
                 ->whereRaw('1 = 0')
                 ->paginate($perPage);
         }
 
-        $builder = $this->feedService->engagementQuery($viewer);
+        $builder = $this->feedService->engagementQuery($viewer)->approved();
         $driver = Schema::getConnection()->getDriverName();
 
         if (in_array($driver, ['mysql', 'mariadb'], true)) {

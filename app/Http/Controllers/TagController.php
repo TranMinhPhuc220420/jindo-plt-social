@@ -22,6 +22,7 @@ class TagController extends Controller
         $viewer = $request->user();
 
         $posts = $this->feedService->engagementQuery($viewer)
+            ->approved()
             ->whereHas('tags', fn ($query) => $query->where('tags.id', $tag->id))
             ->orderByDesc('created_at')
             ->orderByDesc('id')

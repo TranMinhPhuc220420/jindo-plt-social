@@ -15,6 +15,8 @@ class LikeController extends Controller
 {
     public function store(Request $request, Post $post): JsonResponse
     {
+        $this->authorize('engage', $post);
+
         abort_if($request->user()->isSuspended(), 403);
 
         $validated = $request->validate([
@@ -45,6 +47,8 @@ class LikeController extends Controller
 
     public function destroy(Request $request, Post $post): JsonResponse
     {
+        $this->authorize('engage', $post);
+
         abort_if($request->user()->isSuspended(), 403);
 
         Like::query()

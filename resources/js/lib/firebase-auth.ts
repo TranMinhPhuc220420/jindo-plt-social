@@ -1,4 +1,5 @@
 import { signInWithCustomToken } from 'firebase/auth';
+import type { Auth } from 'firebase/auth';
 import { getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebase';
 
 function xsrfToken(): string | undefined {
@@ -10,7 +11,62 @@ function xsrfToken(): string | undefined {
     return raw ? decodeURIComponent(raw) : undefined;
 }
 
+function wait(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
+}
+
 let signInPromise: Promise<boolean> | null = null;
+
+async function mintAndSignIn(auth: Auth): Promise<'ok' | 'auth' | 'retry'> {
+    try {
+        const tokenHeader = xsrfToken();
+        const response = await fetch('/firebase/token', {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                ...(tokenHeader ? { 'X-XSRF-TOKEN': tokenHeader } : {}),
+            },
+            credentials: 'same-origin',
+        });
+
+        if (response.status === 401 || response.status === 419) {
+            console.warn(
+                '[firebase-auth] /firebase/token failed',
+                response.status,
+            );
+
+            return 'auth';
+        }
+
+        if (!response.ok) {
+            console.warn(
+                '[firebase-auth] /firebase/token failed',
+                response.status,
+            );
+
+            return 'retry';
+        }
+
+        const body = (await response.json()) as { token?: string };
+
+        if (!body.token) {
+            console.warn('[firebase-auth] token missing in response');
+
+            return 'retry';
+        }
+
+        await signInWithCustomToken(auth, body.token);
+
+        return auth.currentUser ? 'ok' : 'retry';
+    } catch (error) {
+        console.warn('[firebase-auth] sign-in failed', error);
+
+        return 'retry';
+    }
+}
 
 /**
  * Mint a Laravel custom token and sign into Firebase Auth (once per session).
@@ -27,6 +83,12 @@ export async function ensureFirebaseSignedIn(): Promise<boolean> {
         return false;
     }
 
+    try {
+        await auth.authStateReady();
+    } catch (error) {
+        console.warn('[firebase-auth] authStateReady failed', error);
+    }
+
     if (auth.currentUser) {
         return true;
     }
@@ -36,46 +98,32 @@ export async function ensureFirebaseSignedIn(): Promise<boolean> {
     }
 
     signInPromise = (async (): Promise<boolean> => {
-        try {
-            const tokenHeader = xsrfToken();
-            const response = await fetch('/firebase/token', {
-                method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    ...(tokenHeader ? { 'X-XSRF-TOKEN': tokenHeader } : {}),
-                },
-                credentials: 'same-origin',
-            });
+        const delays = [0, 400, 800];
 
-            if (!response.ok) {
-                console.warn(
-                    '[firebase-auth] /firebase/token failed',
-                    response.status,
-                );
-
-                return false;
+        for (let attempt = 0; attempt < delays.length; attempt++) {
+            if (delays[attempt] > 0) {
+                await wait(delays[attempt]);
             }
 
-            const body = (await response.json()) as { token?: string };
-
-            if (!body.token) {
-                console.warn('[firebase-auth] token missing in response');
-
-                return false;
+            if (auth.currentUser) {
+                return true;
             }
 
-            await signInWithCustomToken(auth, body.token);
+            const result = await mintAndSignIn(auth);
 
-            return Boolean(auth.currentUser);
-        } catch (error) {
-            console.warn('[firebase-auth] sign-in failed', error);
+            if (result === 'ok') {
+                return true;
+            }
 
-            return false;
-        } finally {
-            signInPromise = null;
+            if (result === 'auth') {
+                return false;
+            }
         }
-    })();
+
+        return false;
+    })().finally(() => {
+        signInPromise = null;
+    });
 
     return signInPromise;
 }

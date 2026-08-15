@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\User;
+use App\Notifications\Concerns\KeepsSemanticBroadcastType;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Notifications\Messages\BroadcastMessage;
@@ -10,7 +11,7 @@ use Illuminate\Notifications\Notification;
 
 class UserFollowedNotification extends Notification implements ShouldBroadcastNow
 {
-    use Queueable;
+    use KeepsSemanticBroadcastType, Queueable;
 
     public function __construct(public User $actor) {}
 

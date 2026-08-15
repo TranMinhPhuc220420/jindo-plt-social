@@ -1,6 +1,6 @@
-import { router } from '@inertiajs/react';
 import { Check, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { SharedPostEmbed } from '@/components/posts/shared-post-embed';
 import { EmptyState } from '@/components/social/empty-state';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,8 +15,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { useInitials } from '@/hooks/use-initials';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import { publishLiveConversationMessage } from '@/lib/realtime';
 import { cn } from '@/lib/utils';
-import type { SharedPost } from '@/types';
+import type { ChatMessage, SharedPost } from '@/types';
 
 type Recipient = {
     id: number;
@@ -93,24 +95,75 @@ export function ShareToMessageDialog({
         });
     }
 
-    function handleSend(): void {
+    async function handleSend(): Promise<void> {
         if (selected.length === 0 || sending) {
             return;
         }
 
         setSending(true);
-        router.post(
-            `/posts/${postId}/share-message`,
-            {
-                usernames: selected,
-                body: note.trim() === '' ? null : note,
-            },
-            {
-                preserveScroll: true,
-                onFinish: () => setSending(false),
-                onSuccess: () => onOpenChange(false),
-            },
-        );
+
+        const token = document.cookie
+            .split('; ')
+            .find((row) => row.startsWith('XSRF-TOKEN='))
+            ?.split('=')[1];
+
+        try {
+            const response = await fetch(`/posts/${postId}/share-message`, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    ...(token
+                        ? { 'X-XSRF-TOKEN': decodeURIComponent(token) }
+                        : {}),
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    usernames: selected,
+                    body: note.trim() === '' ? null : note,
+                }),
+            });
+
+            if (!response.ok) {
+                toast.error('Could not send.');
+
+                return;
+            }
+
+            const data = (await response.json()) as {
+                conversations?: Array<{
+                    id: string;
+                    other_user: ChatMessage['user'];
+                    body: string | null;
+                    shared_post?: SharedPost | null;
+                    created_at: string | null;
+                    user: ChatMessage['user'];
+                }>;
+            };
+
+            if (isFirebaseConfigured() && data.conversations) {
+                await Promise.all(
+                    data.conversations.map((row) =>
+                        publishLiveConversationMessage({
+                            conversation_id: row.id,
+                            body: row.body,
+                            shared_post: row.shared_post ?? sharedPreview,
+                            created_at: row.created_at,
+                            user: row.user,
+                            other_user: row.other_user,
+                        }),
+                    ),
+                );
+            }
+
+            toast.success('Post sent.');
+            onOpenChange(false);
+        } catch {
+            toast.error('Could not send.');
+        } finally {
+            setSending(false);
+        }
     }
 
     return (
@@ -227,7 +280,9 @@ export function ShareToMessageDialog({
                     <Button
                         type="button"
                         disabled={selected.length === 0 || sending}
-                        onClick={handleSend}
+                        onClick={() => {
+                            void handleSend();
+                        }}
                         className="min-w-24"
                     >
                         {sending ? <Spinner /> : 'Send'}

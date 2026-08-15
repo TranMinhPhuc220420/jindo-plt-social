@@ -42,10 +42,13 @@ export type Post = {
     liked_by_viewer: boolean;
     bookmarked_by_viewer: boolean;
     shared_post: SharedPost | null;
+    moderation_status: 'pending' | 'approved' | 'rejected';
+    moderation_reason: string | null;
     user: PostAuthor;
     can: {
         update: boolean;
         delete: boolean;
+        report: boolean;
     };
 };
 

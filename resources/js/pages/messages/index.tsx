@@ -1,21 +1,38 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useEffect, useRef } from 'react';
 import { ConversationInbox } from '@/components/messages/conversation-inbox';
 import { NewMessageButton } from '@/components/messages/new-message-button';
 import { EmptyState } from '@/components/social/empty-state';
 import { Button } from '@/components/ui/button';
-import type { ConversationSummary } from '@/types';
+import { useInbox } from '@/hooks/use-inbox';
 
-type Props = {
-    conversations: ConversationSummary[];
-};
+export default function MessagesIndex() {
+    const { conversations, loading } = useInbox();
+    const { url } = usePage();
+    const forceInbox = url.includes('inbox=1');
+    const redirected = useRef(false);
 
-export default function MessagesIndex({ conversations }: Props) {
+    useEffect(() => {
+        if (
+            forceInbox ||
+            loading ||
+            redirected.current ||
+            conversations.length === 0
+        ) {
+            return;
+        }
+
+        redirected.current = true;
+        router.visit(`/messages/${conversations[0].id}`, { replace: true });
+    }, [forceInbox, loading, conversations]);
+
     return (
         <>
             <Head title="Messages" />
             <div className="mx-auto flex h-full min-h-0 w-full max-w-xl flex-1 flex-col overflow-hidden rounded-lg border bg-card shadow-xs md:max-w-none">
                 <ConversationInbox
                     conversations={conversations}
+                    loading={loading}
                     titleAs="h1"
                     emptyState={
                         <EmptyState

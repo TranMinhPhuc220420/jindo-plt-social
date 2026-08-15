@@ -2,45 +2,27 @@
 
 namespace App\Services;
 
-use App\Models\Conversation;
 use App\Models\User;
 use App\Services\Firebase\ConversationMemberSync;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
+use App\Support\ConversationId;
 use InvalidArgumentException;
 
 class ConversationService
 {
     public function __construct(private ConversationMemberSync $memberSync) {}
 
-    public function findOrCreateBetween(User $a, User $b): Conversation
+    /**
+     * Gate a 1:1 thread: mutual follow + Admin member map. Returns the RTDB cid.
+     */
+    public function ensureBetween(User $viewer, User $other): string
     {
-        if (! $a->isMutualWith($b)) {
+        if ($viewer->id === $other->id || ! $viewer->isMutualWith($other)) {
             throw new InvalidArgumentException('Users must follow each other to message.');
         }
 
-        $existing = Conversation::query()
-            ->whereHas('participants', fn (Builder $query) => $query->where('users.id', $a->id))
-            ->whereHas('participants', fn (Builder $query) => $query->where('users.id', $b->id))
-            ->whereDoesntHave('participants', fn (Builder $query) => $query->whereNotIn('users.id', [$a->id, $b->id]))
-            ->first();
+        $conversationId = ConversationId::between((int) $viewer->id, (int) $other->id);
+        $this->memberSync->syncPair($conversationId, (int) $viewer->id, (int) $other->id);
 
-        if ($existing !== null) {
-            $conversation = $existing->load('participants');
-            $this->memberSync->sync($conversation);
-
-            return $conversation;
-        }
-
-        $conversation = DB::transaction(function () use ($a, $b): Conversation {
-            $conversation = Conversation::query()->create();
-            $conversation->participants()->attach([$a->id, $b->id]);
-
-            return $conversation->load('participants');
-        });
-
-        $this->memberSync->sync($conversation);
-
-        return $conversation;
+        return $conversationId;
     }
 }

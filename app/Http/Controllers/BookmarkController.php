@@ -20,6 +20,7 @@ class BookmarkController extends Controller
         $viewer = $request->user();
 
         $posts = $this->feedService->engagementQuery($viewer)
+            ->approved()
             ->join('bookmarks', function ($join) use ($viewer): void {
                 $join->on('bookmarks.post_id', '=', 'posts.id')
                     ->where('bookmarks.user_id', '=', $viewer->id);
@@ -37,6 +38,8 @@ class BookmarkController extends Controller
 
     public function store(Request $request, Post $post): JsonResponse
     {
+        $this->authorize('engage', $post);
+
         abort_if($request->user()->isSuspended(), 403);
 
         Bookmark::query()->firstOrCreate([
@@ -52,6 +55,8 @@ class BookmarkController extends Controller
 
     public function destroy(Request $request, Post $post): JsonResponse
     {
+        $this->authorize('engage', $post);
+
         abort_if($request->user()->isSuspended(), 403);
 
         Bookmark::query()

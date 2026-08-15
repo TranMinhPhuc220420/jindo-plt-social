@@ -97,7 +97,11 @@ class MentionService
             ]);
 
             if ($mention->wasRecentlyCreated && $post instanceof Post) {
-                $user->notify(new UserMentionedNotification($actor, $post, $mentionable));
+                $shouldNotify = $mentionable instanceof Comment || $post->isApproved();
+
+                if ($shouldNotify) {
+                    $user->notify(new UserMentionedNotification($actor, $post, $mentionable));
+                }
             }
         }
     }

@@ -1,5 +1,6 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
+import { LegalLinks } from '@/components/legal/legal-links';
 import {
     Card,
     CardContent,
@@ -18,6 +19,9 @@ export default function AuthCardLayout({
     title?: string;
     description?: string;
 }>) {
+    const { name } = usePage().props;
+    const brand = String(name ?? 'PLT Học Bá');
+
     return (
         <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
             <div className="flex w-full max-w-md flex-col gap-6">
@@ -27,7 +31,7 @@ export default function AuthCardLayout({
                 >
                     <img
                         src="/full-logo.png"
-                        alt="PLT Social"
+                        alt={brand}
                         decoding="async"
                         className="h-12 w-auto object-contain"
                     />
@@ -43,6 +47,7 @@ export default function AuthCardLayout({
                             {children}
                         </CardContent>
                     </Card>
+                    <LegalLinks className="flex justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground" />
                 </div>
             </div>
         </div>

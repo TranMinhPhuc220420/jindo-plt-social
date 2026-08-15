@@ -1,6 +1,6 @@
 # Module map — folder & file blueprint by phase
 
-Living blueprint of **paths to create or extend** for PLT Social, derived from [`../SRS.md`](../SRS.md). Status of implementation lives in [`../PROGRESS.md`](../PROGRESS.md).
+Living blueprint of **paths to create or extend** for PLT Học Bá, derived from [`../SRS.md`](../SRS.md). Status of implementation lives in [`../PROGRESS.md`](../PROGRESS.md).
 
 **Do not** create empty stubs for later phases. Add real files only when that phase is active.
 
@@ -104,7 +104,12 @@ database/
     PostFactory.php                                 [P1](new)
   seeders/
     DatabaseSeeder.php                              [P1](extend)
-    DemoSocialSeeder.php                            [P1](new)  # optional local demo
+    DemoSocialSeeder.php                            [P1](new)  # local learning-community demo
+    LearningCommunityCatalog.php                    [P1](extend)
+    Support/DemoMediaDownloader.php                 [P1](extend)
+    data/learning_members.php                       [P1](extend)
+    data/learning_posts.php                         [P1](extend)
+    data/learning_images.php                        [P1](extend)
 
 app/
   Models/
@@ -151,8 +156,10 @@ resources/js/
     profile/following.tsx                           [P1](new)
     admin/users/index.tsx                           [P1](new)
     admin/posts/index.tsx                           [P1](new)
+    admin/dashboard.tsx                             [P4](new)
     settings/profile.tsx                            [P1](extend)
     auth/register.tsx                               [P1](extend)
+    auth/register-closed.tsx                        [P30](new)
     dashboard.tsx                                   [P1](remove/redirect)
   components/
     posts/
@@ -164,6 +171,9 @@ resources/js/
       follow-button.tsx                             [P1](new)
       follow-list.tsx                               [P1](new)
     app-sidebar.tsx                                 [P1](extend)
+    admin/admin-sidebar.tsx                         [P31](new)
+    admin/admin-header.tsx                          [P31](new)
+    admin/admin-pagination.tsx                      [P31](new)
   types/
     post.ts                                         [P1](new)
     profile.ts                                      [P1](new)
@@ -197,9 +207,12 @@ tests/Feature/
 | Following | `GET /u/{username}/following` | `ProfileController@following` | `profile/following` |
 | Follow | `POST /u/{username}/follow` | `FollowController@store` | — |
 | Unfollow | `DELETE /u/{username}/follow` | `FollowController@destroy` | — |
-| Admin users | `GET /admin/users` | `Admin\UserController@index` | `admin/users/index` |
+| Admin users | `GET /admin/users` (`?q=`) | `Admin\UserController@index` | `admin/users/index` |
+| Admin create user | `POST /admin/users` | `Admin\UserController@store` | — |
 | Admin suspend | `PATCH /admin/users/{user}` | `Admin\UserController@update` | — |
-| Admin posts | `GET /admin/posts` (+ delete) | `Admin\PostController` | `admin/posts/index` |
+| Admin posts | `GET /admin/posts` (`?q=`, `?status=`) | `Admin\PostController` | `admin/posts/index` |
+| Admin approve post | `PATCH /admin/posts/{post}/approve` | `Admin\PostController@approve` | — |
+| Admin reject post | `PATCH /admin/posts/{post}/reject` | `Admin\PostController@reject` | — |
 
 Auth: `auth` + `verified` on social routes; admin routes additionally require `role=admin`.
 
@@ -385,7 +398,7 @@ tests/Feature/
 ### Schema reminders (SRS §6.3)
 
 - **post_media:** `post_id`, `path`, `position`, optional width/height; max 6 images
-- **conversations** + **conversation_participants** (unique pair) + **messages** (`body` / `image_path`, `read_at`)
+- **conversations / messages:** dropped in Phase 40 — 1:1 chat lives on Firebase RTDB (`{minUid}_{maxUid}`). See ADR 0020.
 
 ### Phase 3 routes (indicative)
 
@@ -656,9 +669,16 @@ resources/js/components/social/
 app/Events/
   UnreadBadgesUpdated.php
 
+app/Services/
+  UnreadBadgeBroadcaster.php
+
+app/Listeners/
+  BroadcastUnreadBadgesOnNotification.php
+
 app/Http/Controllers/
   MessageController.php
   ConversationController.php
+  NotificationController.php
 
 docs/design/
   020-notification-badges.md

@@ -34,17 +34,17 @@
         <link rel="icon" href="/logo.png" type="image/png" sizes="512x512">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
-        <meta name="application-name" content="{{ config('app.name', 'PLT Social') }}">
-        <meta name="description" content="PLT Social — share updates, follow friends, and stay in the loop.">
+        <meta name="application-name" content="{{ config('app.name', 'PLT Học Bá') }}">
+        <meta name="description" content="{{ config('app.name') }} — {{ config('app.tagline') }}. {{ config('app.subtitle') }}">
         <meta name="author" content="PLT Solutions">
         <meta property="og:type" content="website">
-        <meta property="og:site_name" content="{{ config('app.name', 'PLT Social') }}">
-        <meta property="og:title" content="{{ config('app.name', 'PLT Social') }}">
-        <meta property="og:description" content="Share updates, follow friends, and stay in the loop.">
+        <meta property="og:site_name" content="{{ config('app.name', 'PLT Học Bá') }}">
+        <meta property="og:title" content="{{ config('app.name', 'PLT Học Bá') }}">
+        <meta property="og:description" content="{{ config('app.tagline') }}. Cộng đồng học tập có kiểm soát — chỉ thành viên được PLT cấp tài khoản.">
         <meta property="og:image" content="{{ url('/full-logo.png') }}">
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="{{ config('app.name', 'PLT Social') }}">
-        <meta name="twitter:description" content="Share updates, follow friends, and stay in the loop.">
+        <meta name="twitter:title" content="{{ config('app.name', 'PLT Học Bá') }}">
+        <meta name="twitter:description" content="{{ config('app.tagline') }}. Cộng đồng học tập có kiểm soát — chỉ thành viên được PLT cấp tài khoản.">
         <meta name="twitter:image" content="{{ url('/full-logo.png') }}">
 
         @fonts
@@ -52,7 +52,7 @@
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         <x-inertia::head>
-            <title>{{ config('app.name', 'PLT Social') }}</title>
+            <title>{{ config('app.name', 'PLT Học Bá') }}</title>
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">

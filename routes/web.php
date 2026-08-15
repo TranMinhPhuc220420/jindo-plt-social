@@ -7,12 +7,14 @@ use App\Http\Controllers\ExploreController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\FirebaseTokenController;
 use App\Http\Controllers\FollowController;
+use App\Http\Controllers\LegalController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostShareController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ShareRecipientController;
 use App\Http\Controllers\TagController;
@@ -21,6 +23,9 @@ use App\Http\Middleware\EnsureUserIsNotSuspended;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+Route::get('guidelines', [LegalController::class, 'show'])->defaults('page', 'guidelines')->name('guidelines');
+Route::get('privacy', [LegalController::class, 'show'])->defaults('page', 'privacy')->name('privacy');
+Route::get('copyright', [LegalController::class, 'show'])->defaults('page', 'copyright')->name('copyright');
 
 Route::middleware(['auth', 'verified', EnsureUserIsNotSuspended::class])->group(function () {
     Route::get('feed', [FeedController::class, 'index'])->name('feed');
@@ -32,11 +37,15 @@ Route::middleware(['auth', 'verified', EnsureUserIsNotSuspended::class])->group(
     Route::get('t/{slug}', [TagController::class, 'show'])->name('tags.show');
 
     Route::get('messages', [ConversationController::class, 'index'])->name('messages.index');
-    Route::post('messages', [ConversationController::class, 'store'])->middleware('throttle:messages')->name('messages.store');
-    Route::get('messages/{conversation}', [ConversationController::class, 'show'])->name('messages.show');
-    Route::post('messages/{conversation}/read', [ConversationController::class, 'markRead'])->name('messages.read');
-    Route::post('messages/{conversation}/typing', [ConversationController::class, 'typing'])->middleware('throttle:messages')->name('messages.typing');
-    Route::post('messages/{conversation}/messages', [MessageController::class, 'store'])->middleware('throttle:messages')->name('messages.messages.store');
+    Route::post('messages/ensure', [ConversationController::class, 'ensure'])->middleware('throttle:messages')->name('messages.ensure');
+    Route::post('messages/media', [MessageController::class, 'storeMedia'])->middleware('throttle:messages')->name('messages.media');
+    Route::get('messages/{conversation}', [ConversationController::class, 'show'])
+        ->where('conversation', '[0-9]+_[0-9]+')
+        ->name('messages.show');
+    Route::post('messages/{conversation}/typing', [ConversationController::class, 'typing'])
+        ->middleware('throttle:messages')
+        ->where('conversation', '[0-9]+_[0-9]+')
+        ->name('messages.typing');
 
     Route::post('posts', [PostController::class, 'store'])->middleware('throttle:posts')->name('posts.store');
     Route::get('posts/{post}', [PostController::class, 'show'])->name('posts.show');
@@ -55,6 +64,7 @@ Route::middleware(['auth', 'verified', EnsureUserIsNotSuspended::class])->group(
 
     Route::post('posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:comments')->name('comments.store');
     Route::delete('comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+    Route::post('reports', [ReportController::class, 'store'])->middleware('throttle:reports')->name('reports.store');
 
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');

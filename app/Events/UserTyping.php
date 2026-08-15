@@ -14,7 +14,7 @@ class UserTyping implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public function __construct(
-        public int $conversationId,
+        public string $conversationId,
         public User $user,
     ) {}
 

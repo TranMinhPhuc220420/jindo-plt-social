@@ -1,4 +1,5 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import { LegalLinks } from '@/components/legal/legal-links';
 import { FadeIn } from '@/components/motion/fade-in';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
@@ -8,6 +9,9 @@ export default function AuthSimpleLayout({
     title,
     description,
 }: AuthLayoutProps) {
+    const { name } = usePage().props;
+    const brand = String(name ?? 'PLT Học Bá');
+
     return (
         <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-gradient-to-br from-primary/10 via-background to-muted p-6 md:p-10">
             <FadeIn className="w-full max-w-sm">
@@ -20,7 +24,7 @@ export default function AuthSimpleLayout({
                             >
                                 <img
                                     src="/full-logo.png"
-                                    alt="PLT Social"
+                                    alt={brand}
                                     decoding="async"
                                     className="h-16 w-auto object-contain"
                                 />
@@ -39,6 +43,7 @@ export default function AuthSimpleLayout({
                         {children}
                     </div>
                 </div>
+                <LegalLinks className="mt-4 flex justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground" />
             </FadeIn>
         </div>
     );

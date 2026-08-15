@@ -59,3 +59,11 @@ Short design write-ups for non-trivial features **before or while** implementing
 | [025-notification-list-ux.md](./025-notification-list-ux.md) | — | Implemented |
 | [026-post-share.md](./026-post-share.md) | 28 | Implemented |
 | [027-messages-mobile.md](./027-messages-mobile.md) | 29 | Implemented |
+| [028-admin-console-layout.md](./028-admin-console-layout.md) | 31 | Implemented |
+| [029-post-moderation.md](./029-post-moderation.md) | 32 | Implemented |
+| [030-plt-hoc-ba-rebrand.md](./030-plt-hoc-ba-rebrand.md) | 33 | Implemented |
+| [031-community-legal-pages.md](./031-community-legal-pages.md) | 34 | Implemented |
+| [032-content-reports.md](./032-content-reports.md) | 35 | Implemented |
+| [033-minimal-profile-under18.md](./033-minimal-profile-under18.md) | 36 | Implemented |
+| [034-firebase-live-dm.md](./034-firebase-live-dm.md) | 38–39 | Implemented (superseded for SoT by 035) |
+| [035-firebase-only-dms.md](./035-firebase-only-dms.md) | 40 | Implemented |

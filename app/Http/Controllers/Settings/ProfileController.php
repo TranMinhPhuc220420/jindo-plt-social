@@ -44,19 +44,8 @@ class ProfileController extends Controller
             'username',
             'email',
             'bio',
-            'workplace',
             'education',
-            'location',
-            'hometown',
-            'website',
-            'birthday',
-            'gender',
-            'relationship_status',
         ]);
-
-        if ($request->filled('birthday') === false && $request->exists('birthday')) {
-            $data['birthday'] = null;
-        }
 
         $incomingPrivacy = $request->input('profile_privacy', []);
         if (is_array($incomingPrivacy)) {

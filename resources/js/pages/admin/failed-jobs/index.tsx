@@ -1,4 +1,13 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
+import { AdminPagination } from '@/components/admin/admin-pagination';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 
 type FailedJob = {
     id: number;
@@ -22,70 +31,64 @@ export default function AdminFailedJobsIndex({ jobs }: Props) {
     return (
         <>
             <Head title="Admin · Failed jobs" />
-            <div className="space-y-4 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h1 className="text-xl font-semibold">Failed jobs</h1>
-                        <p className="text-sm text-muted-foreground">
-                            Read-only view. Retry via{' '}
-                            <code className="text-xs">
-                                php artisan queue:retry
-                            </code>
-                            .
-                        </p>
-                    </div>
-                    <Link href="/admin" className="text-sm hover:underline">
-                        ← Dashboard
-                    </Link>
+            <div className="space-y-4">
+                <div>
+                    <h1 className="text-xl font-semibold">Failed jobs</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Read-only view. Retry via{' '}
+                        <code className="text-xs">php artisan queue:retry</code>{' '}
+                        or Horizon.
+                    </p>
                 </div>
 
-                <ul className="divide-y rounded-xl border">
-                    {jobs.data.length === 0 ? (
-                        <li className="px-4 py-10 text-center text-sm text-muted-foreground">
-                            No failed jobs.
-                        </li>
-                    ) : (
-                        jobs.data.map((job) => (
-                            <li key={job.id} className="space-y-1 px-4 py-3">
-                                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                                    <p className="font-medium">
-                                        {job.display_name}
-                                    </p>
-                                    <time className="text-xs text-muted-foreground">
-                                        {job.failed_at}
-                                    </time>
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    {job.connection} / {job.queue} · {job.uuid}
-                                </p>
-                                <pre className="overflow-x-auto rounded-md bg-muted/50 p-2 text-[11px] whitespace-pre-wrap">
-                                    {job.exception}
-                                </pre>
-                            </li>
-                        ))
-                    )}
-                </ul>
-
-                <div className="flex justify-between">
-                    {jobs.prev_page_url ? (
-                        <Link
-                            href={jobs.prev_page_url}
-                            className="text-sm hover:underline"
-                        >
-                            Previous
-                        </Link>
-                    ) : (
-                        <span />
-                    )}
-                    {jobs.next_page_url ? (
-                        <Link
-                            href={jobs.next_page_url}
-                            className="text-sm hover:underline"
-                        >
-                            Next
-                        </Link>
-                    ) : null}
+                <div className="rounded-xl border bg-card">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Job</TableHead>
+                                <TableHead>Queue</TableHead>
+                                <TableHead>Failed at</TableHead>
+                                <TableHead>Exception</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {jobs.data.length === 0 ? (
+                                <TableRow>
+                                    <TableCell
+                                        colSpan={4}
+                                        className="py-10 text-center text-muted-foreground"
+                                    >
+                                        No failed jobs.
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                jobs.data.map((job) => (
+                                    <TableRow key={job.id}>
+                                        <TableCell>
+                                            <div className="font-medium">
+                                                {job.display_name}
+                                            </div>
+                                            <div className="max-w-[16rem] truncate text-xs text-muted-foreground">
+                                                {job.uuid}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {job.connection} / {job.queue}
+                                        </TableCell>
+                                        <TableCell>{job.failed_at}</TableCell>
+                                        <TableCell className="max-w-md whitespace-normal">
+                                            <pre className="max-h-24 overflow-auto rounded-md bg-muted/50 p-2 text-[11px] whitespace-pre-wrap">
+                                                {job.exception}
+                                            </pre>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
                 </div>
+
+                <AdminPagination paginator={jobs} />
             </div>
         </>
     );
@@ -93,7 +96,7 @@ export default function AdminFailedJobsIndex({ jobs }: Props) {
 
 AdminFailedJobsIndex.layout = {
     breadcrumbs: [
-        { title: 'Admin', href: '/admin' },
+        { title: 'Dashboard', href: '/admin' },
         { title: 'Failed jobs', href: '/admin/failed-jobs' },
     ],
 };

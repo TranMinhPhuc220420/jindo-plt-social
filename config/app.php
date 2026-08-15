@@ -13,7 +13,11 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'PLT Social'),
+    'name' => env('APP_NAME', 'PLT Học Bá'),
+
+    'tagline' => env('APP_TAGLINE', 'Học để giỏi - Chia sẻ để cùng tiến bộ'),
+
+    'subtitle' => env('APP_SUBTITLE', 'Nền tảng cộng đồng học tập của PLT Solutions'),
 
     /*
     |--------------------------------------------------------------------------

@@ -1,12 +1,14 @@
 <?php
 
-use App\Events\MessageSent;
-use App\Events\UnreadBadgesUpdated;
 use App\Events\UserTyping;
 use App\Models\User;
 use App\Services\ConversationService;
-use Illuminate\Broadcasting\BroadcastManager;
+use App\Support\ConversationId;
+use App\Support\MediaDisk;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 test('non mutual users cannot start a conversation', function () {
     $a = User::factory()->create();
@@ -16,141 +18,73 @@ test('non mutual users cannot start a conversation', function () {
 
     $this->actingAs($a)
         ->from(route('messages.index'))
-        ->post(route('messages.store'), [
+        ->post(route('messages.ensure'), [
             'username' => $b->username,
         ])
         ->assertRedirect(route('messages.index'))
         ->assertSessionHasErrors('username');
 });
 
-test('mutual followers can message each other', function () {
-    Event::fake([MessageSent::class, UnreadBadgesUpdated::class]);
-
+test('mutual followers can ensure a conversation and open the thread shell', function () {
     $a = User::factory()->create();
     $b = User::factory()->create();
 
     $a->following()->attach($b->id);
     $b->following()->attach($a->id);
 
+    $cid = ConversationId::between((int) $a->id, (int) $b->id);
+
     $this->actingAs($a)
-        ->post(route('messages.store'), [
+        ->post(route('messages.ensure'), [
             'username' => $b->username,
         ])
-        ->assertRedirect();
-
-    $conversation = app(ConversationService::class)->findOrCreateBetween($a, $b);
+        ->assertRedirect(route('messages.show', $cid));
 
     $this->actingAs($a)
-        ->from(route('messages.show', $conversation))
-        ->post(route('messages.messages.store', $conversation), [
-            'body' => 'Hello mutual friend',
+        ->postJson(route('messages.ensure'), [
+            'username' => $b->username,
         ])
-        ->assertRedirect(route('messages.show', $conversation));
+        ->assertOk()
+        ->assertJsonPath('id', $cid)
+        ->assertJsonPath('other_user.id', $b->id)
+        ->assertJsonPath('other_user.username', $b->username);
 
-    $this->assertDatabaseHas('messages', [
-        'conversation_id' => $conversation->id,
-        'user_id' => $a->id,
-        'body' => 'Hello mutual friend',
-    ]);
-
-    Event::assertDispatched(MessageSent::class);
-    Event::assertDispatched(UnreadBadgesUpdated::class, function (UnreadBadgesUpdated $event) use ($b, $conversation) {
-        return $event->user->is($b)
-            && $event->unreadMessagesCount === 1
-            && $event->conversationId === $conversation->id;
-    });
+    $this->actingAs($a)
+        ->get(route('messages.show', $cid))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('messages/show')
+            ->where('conversation.id', $cid)
+            ->where('conversation.other_user.id', $b->id)
+            ->has('messages', 0)
+            ->has('conversations', 0));
 });
 
-test('json message send returns chat payload without inertia reload', function () {
-    Event::fake([MessageSent::class, UnreadBadgesUpdated::class]);
-
+test('json ensure is rejected for non-mutual followers', function () {
     $a = User::factory()->create();
     $b = User::factory()->create();
-
     $a->following()->attach($b->id);
-    $b->following()->attach($a->id);
-
-    $conversation = app(ConversationService::class)->findOrCreateBetween($a, $b);
 
     $this->actingAs($a)
-        ->postJson(route('messages.messages.store', $conversation), [
-            'body' => 'Fast path hello',
+        ->postJson(route('messages.ensure'), [
+            'username' => $b->username,
+        ])
+        ->assertUnprocessable();
+});
+
+test('message photo upload returns an image url without a messages table', function () {
+    Storage::fake(MediaDisk::name());
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson(route('messages.media'), [
+            'image' => UploadedFile::fake()->image('chat.jpg'),
         ])
         ->assertCreated()
-        ->assertJsonPath('body', 'Fast path hello')
-        ->assertJsonPath('is_mine', true)
-        ->assertJsonPath('user.id', $a->id)
-        ->assertJsonStructure([
-            'id',
-            'conversation_id',
-            'body',
-            'image_url',
-            'shared_post',
-            'created_at',
-            'user' => ['id', 'name', 'username', 'avatar'],
-            'is_mine',
-        ]);
+        ->assertJsonStructure(['image_url']);
 
-    Event::assertDispatched(MessageSent::class);
-    Event::assertDispatched(UnreadBadgesUpdated::class);
-});
-
-test('marking a thread read while viewing clears unread for that conversation', function () {
-    Event::fake([UnreadBadgesUpdated::class]);
-
-    $a = User::factory()->create();
-    $b = User::factory()->create();
-
-    $a->following()->attach($b->id);
-    $b->following()->attach($a->id);
-
-    $conversation = app(ConversationService::class)->findOrCreateBetween($a, $b);
-
-    $conversation->messages()->create([
-        'user_id' => $a->id,
-        'body' => 'Ping',
-    ]);
-
-    $this->actingAs($b)
-        ->post(route('messages.read', $conversation))
-        ->assertOk()
-        ->assertJson(['unread_messages_count' => 0]);
-
-    expect(
-        $conversation->messages()->whereNull('read_at')->count()
-    )->toBe(0);
-
-    Event::assertDispatched(UnreadBadgesUpdated::class, function (UnreadBadgesUpdated $event) use ($b, $conversation) {
-        return $event->user->is($b)
-            && $event->unreadMessagesCount === 0
-            && $event->conversationId === $conversation->id;
-    });
-});
-
-test('sending a message still succeeds when broadcasting fails', function () {
-    $a = User::factory()->create();
-    $b = User::factory()->create();
-
-    $a->following()->attach($b->id);
-    $b->following()->attach($a->id);
-
-    $conversation = app(ConversationService::class)->findOrCreateBetween($a, $b);
-
-    $this->mock(BroadcastManager::class, function ($mock) {
-        $mock->shouldReceive('event')->andThrow(new RuntimeException('reverb unavailable'));
-    });
-
-    $this->actingAs($a)
-        ->from(route('messages.show', $conversation))
-        ->post(route('messages.messages.store', $conversation), [
-            'body' => 'Survives broadcast outage',
-        ])
-        ->assertRedirect(route('messages.show', $conversation));
-
-    $this->assertDatabaseHas('messages', [
-        'conversation_id' => $conversation->id,
-        'body' => 'Survives broadcast outage',
-    ]);
+    expect(Schema::hasTable('messages'))->toBeFalse();
 });
 
 test('non participants cannot view a conversation', function () {
@@ -161,38 +95,23 @@ test('non participants cannot view a conversation', function () {
     $a->following()->attach($b->id);
     $b->following()->attach($a->id);
 
-    $conversation = app(ConversationService::class)->findOrCreateBetween($a, $b);
+    $cid = app(ConversationService::class)->ensureBetween($a, $b);
 
     $this->actingAs($c)
-        ->get(route('messages.show', $conversation))
+        ->get(route('messages.show', $cid))
         ->assertForbidden();
 });
 
-test('messages index redirects to the latest conversation', function () {
+test('messages index is an inertia shell without a server redirect', function () {
     $a = User::factory()->create();
     $b = User::factory()->create();
-    $c = User::factory()->create();
 
-    $a->following()->attach([$b->id, $c->id]);
+    $a->following()->attach($b->id);
     $b->following()->attach($a->id);
-    $c->following()->attach($a->id);
 
-    $service = app(ConversationService::class);
-    $older = $service->findOrCreateBetween($a, $b);
-    $newer = $service->findOrCreateBetween($a, $c);
-
-    $older->forceFill(['updated_at' => now()->subMinute()])->save();
-    $newer->forceFill(['updated_at' => now()])->save();
+    app(ConversationService::class)->ensureBetween($a, $b);
 
     $this->actingAs($a)
-        ->get(route('messages.index'))
-        ->assertRedirect(route('messages.show', $newer));
-});
-
-test('messages index shows empty inbox when there are no conversations', function () {
-    $user = User::factory()->create();
-
-    $this->actingAs($user)
         ->get(route('messages.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
@@ -200,23 +119,24 @@ test('messages index shows empty inbox when there are no conversations', functio
             ->has('conversations', 0));
 });
 
-test('messages index can force inbox list without redirect', function () {
-    $a = User::factory()->create();
-    $b = User::factory()->create();
+test('messages index can force inbox list', function () {
+    $user = User::factory()->create();
 
-    $a->following()->attach($b->id);
-    $b->following()->attach($a->id);
-
-    $conversation = app(ConversationService::class)->findOrCreateBetween($a, $b);
-
-    $this->actingAs($a)
+    $this->actingAs($user)
         ->get(route('messages.index', ['inbox' => 1]))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('messages/index')
-            ->has('conversations', 1)
-            ->where('conversations.0.id', $conversation->id)
-            ->where('conversations.0.unread_count', 0));
+            ->has('conversations', 0));
+});
+
+test('shared unread messages count is client-owned and always zero from inertia', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('feed'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('auth.unread_messages_count', 0));
 });
 
 test('typing broadcasts for participants', function () {
@@ -228,15 +148,27 @@ test('typing broadcasts for participants', function () {
     $a->following()->attach($b->id);
     $b->following()->attach($a->id);
 
-    $conversation = app(ConversationService::class)->findOrCreateBetween($a, $b);
+    $cid = app(ConversationService::class)->ensureBetween($a, $b);
 
     $this->actingAs($a)
-        ->post(route('messages.typing', $conversation))
+        ->post(route('messages.typing', $cid))
         ->assertNoContent();
 
     Event::assertDispatched(UserTyping::class);
 
     $this->actingAs($a)
-        ->get(route('messages.show', $conversation))
+        ->get(route('messages.show', $cid))
         ->assertOk();
+});
+
+test('legacy message persist routes are gone', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post('/messages/1/messages', ['body' => 'nope'])
+        ->assertNotFound();
+
+    $this->actingAs($user)
+        ->post('/messages/1/read')
+        ->assertNotFound();
 });

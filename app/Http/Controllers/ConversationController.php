@@ -2,15 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\UnreadBadgesUpdated;
 use App\Events\UserTyping;
-use App\Models\Conversation;
-use App\Models\Message;
+use App\Http\Requests\EnsureConversationRequest;
 use App\Models\User;
 use App\Services\ConversationService;
 use App\Services\Firebase\ConversationMemberSync;
-use App\Services\UnreadMessageService;
-use App\Support\PostPresenter;
+use App\Support\ConversationId;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,117 +21,103 @@ class ConversationController extends Controller
 {
     public function __construct(
         private readonly ConversationService $conversations,
-        private readonly UnreadMessageService $unreadMessages,
-        private readonly ConversationMemberSync $memberSync,
     ) {}
 
-    public function index(Request $request): Response|RedirectResponse
+    public function index(): Response
     {
-        $viewer = $request->user();
-
-        $latest = $viewer->conversations()
-            ->latest('updated_at')
-            ->first();
-
-        if ($latest && ! $request->boolean('inbox')) {
-            return redirect()->route('messages.show', $latest);
-        }
-
         return Inertia::render('messages/index', [
-            'conversations' => $this->conversationSummaries($viewer),
+            'conversations' => [],
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function ensure(EnsureConversationRequest $request): RedirectResponse|JsonResponse
     {
-        $validated = $request->validate([
-            'username' => ['required', 'string', 'exists:users,username'],
-        ]);
+        $target = User::query()
+            ->where('username', $request->validated('username'))
+            ->firstOrFail();
 
-        $target = User::query()->where('username', $validated['username'])->firstOrFail();
+        $viewer = $request->user();
+        abort_unless($viewer instanceof User, 403);
 
         try {
-            $conversation = $this->conversations->findOrCreateBetween($request->user(), $target);
+            $conversationId = $this->conversations->ensureBetween($viewer, $target);
         } catch (InvalidArgumentException) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => __('You can only message mutual followers.'),
+                ], 422);
+            }
+
             return back()->withErrors([
                 'username' => __('You can only message mutual followers.'),
             ]);
         }
 
-        return to_route('messages.show', $conversation);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'id' => $conversationId,
+                'other_user' => $this->presentUser($target),
+            ]);
+        }
+
+        return to_route('messages.show', $conversationId);
     }
 
-    public function show(Request $request, Conversation $conversation): Response
+    public function show(Request $request, string $conversation): Response
     {
-        $this->authorize('view', $conversation);
-
         $viewer = $request->user();
-        $conversation->load('participants');
+        abort_unless($viewer instanceof User, 403);
 
-        // Heal RTDB members map for conversations created before Firebase.
-        $this->memberSync->sync($conversation);
+        $pair = ConversationId::parse($conversation);
 
-        $this->markInboundMessagesRead($viewer, $conversation);
+        if ($pair === null) {
+            abort(404);
+        }
 
-        $messages = $conversation->messages()
-            ->with(['user', 'sharedPost.user', 'sharedPost.media'])
-            ->oldest()
-            ->get()
-            ->map(fn (Message $message) => [
-                'id' => $message->id,
-                'body' => $message->body,
-                'image_url' => $message->imageUrl(),
-                'shared_post' => $message->shared_post_id
-                    ? PostPresenter::embedSharedPost($message->sharedPost, (int) $message->shared_post_id)
-                    : null,
-                'read_at' => $message->read_at?->toIso8601String(),
-                'created_at' => $message->created_at?->toIso8601String(),
-                'user' => [
-                    'id' => $message->user->id,
-                    'name' => $message->user->name,
-                    'username' => $message->user->username,
-                    'avatar' => $message->user->avatarUrl(),
-                ],
-                'is_mine' => $message->user_id === $viewer->id,
-            ]);
+        if (! ConversationId::contains($conversation, (int) $viewer->id)) {
+            abort(403);
+        }
 
-        $other = $conversation->otherParticipant($viewer);
+        $otherId = ConversationId::otherId($conversation, (int) $viewer->id);
+        $other = $otherId !== null ? User::query()->find($otherId) : null;
+
+        if ($other === null) {
+            abort(404);
+        }
+
+        if (! $viewer->isMutualWith($other)) {
+            abort(403);
+        }
+
+        $conversationId = $conversation;
+        $viewerId = (int) $viewer->id;
+        $peerId = (int) $other->id;
+
+        dispatch(function () use ($conversationId, $viewerId, $peerId): void {
+            app(ConversationMemberSync::class)->syncPair($conversationId, $viewerId, $peerId);
+        })->afterResponse();
 
         return Inertia::render('messages/show', [
             'conversation' => [
-                'id' => $conversation->id,
-                'other_user' => $other ? [
-                    'id' => $other->id,
-                    'name' => $other->name,
-                    'username' => $other->username,
-                    'avatar' => $other->avatarUrl(),
-                ] : null,
+                'id' => $conversation,
+                'other_user' => $this->presentUser($other),
             ],
-            'messages' => $messages,
-            'conversations' => $this->conversationSummaries($viewer),
+            'messages' => [],
+            'conversations' => [],
         ]);
     }
 
-    /**
-     * Mark inbound messages read while the viewer stays on the thread (live).
-     */
-    public function markRead(Request $request, Conversation $conversation): JsonResponse
+    public function typing(Request $request, string $conversation): HttpResponse
     {
-        $this->authorize('view', $conversation);
+        $viewer = $request->user();
+        abort_unless($viewer instanceof User, 403);
 
-        $count = $this->markInboundMessagesRead($request->user(), $conversation);
-
-        return response()->json([
-            'unread_messages_count' => $count,
-        ]);
-    }
-
-    public function typing(Request $request, Conversation $conversation): HttpResponse
-    {
-        $this->authorize('view', $conversation);
+        if (! ConversationId::contains($conversation, (int) $viewer->id)) {
+            abort(403);
+        }
 
         try {
-            broadcast(new UserTyping($conversation->id, $request->user()))->toOthers();
+            broadcast(new UserTyping($conversation, $viewer))->toOthers();
         } catch (Throwable $e) {
             report($e);
         }
@@ -143,72 +126,15 @@ class ConversationController extends Controller
     }
 
     /**
-     * Mark the other participant's unread messages as read and refresh badges.
+     * @return array{id: int, name: string, username: string, avatar: string|null}
      */
-    private function markInboundMessagesRead(User $viewer, Conversation $conversation): int
+    private function presentUser(User $user): array
     {
-        Message::query()
-            ->where('conversation_id', $conversation->id)
-            ->where('user_id', '!=', $viewer->id)
-            ->whereNull('read_at')
-            ->update(['read_at' => now()]);
-
-        $count = $this->unreadMessages->countFor($viewer);
-
-        try {
-            broadcast(new UnreadBadgesUpdated(
-                $viewer,
-                $count,
-                null,
-                $conversation->id,
-            ));
-        } catch (Throwable $e) {
-            report($e);
-        }
-
-        return $count;
-    }
-
-    /**
-     * @return array<int, array{id: int, other_user: array{id: int, name: string, username: string, avatar: string|null}|null, last_message: array{body: string|null, created_at: string|null}|null, unread_count: int}>
-     */
-    private function conversationSummaries(User $viewer): array
-    {
-        return $viewer->conversations()
-            ->with([
-                'participants',
-                'messages' => fn ($query) => $query->latest()->limit(1),
-            ])
-            ->withCount([
-                'messages as unread_count' => fn ($query) => $query
-                    ->where('user_id', '!=', $viewer->id)
-                    ->whereNull('read_at'),
-            ])
-            ->latest('updated_at')
-            ->get()
-            ->map(function (Conversation $conversation) use ($viewer) {
-                $other = $conversation->otherParticipant($viewer);
-                $last = $conversation->messages->first();
-                $unreadCount = (int) $conversation->getAttributes()['unread_count'];
-
-                return [
-                    'id' => $conversation->id,
-                    'other_user' => $other ? [
-                        'id' => $other->id,
-                        'name' => $other->name,
-                        'username' => $other->username,
-                        'avatar' => $other->avatarUrl(),
-                    ] : null,
-                    'last_message' => $last ? [
-                        'body' => $last->shared_post_id && ($last->body === null || $last->body === '')
-                            ? 'Shared a post'
-                            : $last->body,
-                        'created_at' => $last->created_at?->toIso8601String(),
-                    ] : null,
-                    'unread_count' => $unreadCount,
-                ];
-            })
-            ->values()
-            ->all();
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'username' => $user->username,
+            'avatar' => $user->avatarUrl(),
+        ];
     }
 }

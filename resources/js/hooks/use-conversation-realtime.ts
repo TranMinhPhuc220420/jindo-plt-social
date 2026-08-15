@@ -7,6 +7,7 @@ import {
     useState,
 } from 'react';
 import {
+    isFirebaseDmEnabled,
     isRealtimeEnabled,
     subscribeConversationRealtime,
 } from '@/lib/realtime';
@@ -14,6 +15,9 @@ import type { Auth, ChatMessage } from '@/types';
 
 type PageProps = {
     auth: Auth;
+    realtime?: {
+        driver?: string | null;
+    };
 };
 
 export type TypingPeer = {
@@ -23,6 +27,8 @@ export type TypingPeer = {
 
 type Options = {
     onMessage?: (payload: ChatMessage) => void;
+    onMessageRemoved?: (clientId: string) => void;
+    onPeerRead?: (at: number | null) => void;
     /** Used when a whisper only carries user_id (Reverb members mode). */
     peer?: TypingPeer | null;
 };
@@ -48,18 +54,25 @@ function xsrfToken(): string | undefined {
  * Typing prefers the live driver; falls back to POST when realtime is off.
  */
 export function useConversationRealtime(
-    conversationId: number,
+    conversationId: string,
     options: Options = {},
 ): {
     typingPeer: TypingPeer | null;
     setLocalTyping: (isTyping: boolean) => void;
     clearRemoteTyping: (userId?: number) => void;
 } {
-    const { auth } = usePage<PageProps>().props;
+    const { auth, realtime } = usePage<PageProps>().props;
     const self = auth.user;
+    const realtimeDriver = realtime?.driver ?? null;
     const peer = options.peer ?? null;
     const onMessage = useEffectEvent((payload: ChatMessage) => {
         options.onMessage?.(payload);
+    });
+    const onMessageRemoved = useEffectEvent((clientId: string) => {
+        options.onMessageRemoved?.(clientId);
+    });
+    const onPeerRead = useEffectEvent((at: number | null) => {
+        options.onPeerRead?.(at);
     });
 
     const [typingPeer, setTypingPeer] = useState<TypingPeer | null>(null);
@@ -128,7 +141,7 @@ export function useConversationRealtime(
 
             const livePublish = publishTypingRef.current;
 
-            if (livePublish && user && isRealtimeEnabled()) {
+            if (livePublish && user && isRealtimeEnabled(realtimeDriver)) {
                 livePublish(typing, user);
 
                 return;
@@ -151,7 +164,7 @@ export function useConversationRealtime(
                 credentials: 'same-origin',
             });
         },
-        [conversationId, self],
+        [conversationId, self, realtimeDriver],
     );
 
     const stopLocalTyping = useCallback(() => {
@@ -195,7 +208,7 @@ export function useConversationRealtime(
     );
 
     useEffect(() => {
-        if (!isRealtimeEnabled()) {
+        if (!isFirebaseDmEnabled() && !isRealtimeEnabled(realtimeDriver)) {
             publishTypingRef.current = null;
 
             return;
@@ -205,9 +218,16 @@ export function useConversationRealtime(
             conversationId,
             {
                 selfUserId: self?.id,
+                peerUserId: peer?.id,
                 onMessage: (payload) => {
                     clearRemoteTyping(payload.user.id);
                     onMessage(payload);
+                },
+                onMessageRemoved: (clientId) => {
+                    onMessageRemoved(clientId);
+                },
+                onPeerRead: (at) => {
+                    onPeerRead(at);
                 },
                 onTyping: (remote) => {
                     markRemoteTyping({ id: remote.id, name: remote.name });
@@ -216,6 +236,7 @@ export function useConversationRealtime(
                     clearRemoteTyping(userId);
                 },
             },
+            realtimeDriver,
         );
 
         publishTypingRef.current = publishTyping;
@@ -227,7 +248,14 @@ export function useConversationRealtime(
             unsubscribe();
             setTypingPeer(null);
         };
-    }, [conversationId, clearRemoteTyping, stopLocalTyping, self?.id]);
+    }, [
+        conversationId,
+        clearRemoteTyping,
+        stopLocalTyping,
+        self?.id,
+        peer?.id,
+        realtimeDriver,
+    ]);
 
     return {
         typingPeer,
